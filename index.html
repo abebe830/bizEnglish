@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BizEnglish — ビジネス英語学習アプリ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700&family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --pri:#2563EB;--pri-l:#DBEAFE;
+  --pur:#7C3AED;--pur-l:#EDE9FE;
+  --acc:#F59E0B;--acc-l:#FEF3C7;
+  --ok:#10B981;--ok-l:#D1FAE5;
+  --ng:#EF4444;--ng-l:#FEE2E2;
+  --bg:#F8FAFF;--card:#FFFFFF;--text:#1E293B;--muted:#64748B;--bdr:#E2E8F0;
+  --tab-h:60px;--hdr-h:52px;
+}
+
+/* ── 画面全体を固定（シャドーイングのスクロールを妨げないよう修正） ── */
+html,body{
+  height:100%;height:100dvh;
+  overflow:hidden;
+  background:var(--bg);
+}
+body{font-family:'Nunito',sans-serif;color:var(--text)}
+
+#app{
+  max-width:430px;margin:0 auto;
+  height:100vh;height:100dvh;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  position:relative;
+}
+
+/* ── HEADER ── */
+.hdr{
+  flex-shrink:0;
+  height:var(--hdr-h);
+  padding:0 1rem;
+  display:flex;align-items:center;justify-content:space-between;
+  z-index:100;
+}
+.hdr-title{font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:700;color:#FFF}
+.hdr-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--acc);color:#78350F}
+
+/* ── SCREEN WRAPPER ── */
+/* 英単語・リスニングは固定レイアウト */
+.screen{
+  display:none;
+  flex:1;
+  min-height:0;
+  overflow:hidden;
+  padding:10px 14px;
+  flex-direction:column;
+}
+.screen.active{display:flex}
+
+/* シャドーイングだけスクロール許可 */
+/* display:block にすることで子要素が自然に縦積みになりスクロールが機能する */
+#screen-shadow{
+  display:none;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  flex-direction:unset;
+  padding-bottom:calc(var(--tab-h) + 20px);
+}
+#screen-shadow.active{
+  display:block;
+}
+
+/* ── TAB BAR ── */
+.tab-bar{
+  flex-shrink:0;
+  height:var(--tab-h);
+  background:var(--card);
+  border-top:1px solid var(--bdr);
+  display:flex;
+  z-index:200;
+}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .2s;border:none;background:none;padding:4px 0}
+.tab-item .t-ico{font-size:20px;color:var(--muted);transition:all .2s;line-height:1}
+.tab-item .t-lbl{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.3px}
+.tab-item.active .t-ico,.tab-item.active .t-lbl{color:var(--pri)}
+#tab-shadow.active .t-ico,#tab-shadow.active .t-lbl{color:var(--pur)}
+.tab-item.active .t-ico{transform:scale(1.12)}
+.tab-indicator{position:absolute;top:-2px;height:3px;border-radius:0 0 3px 3px;width:33.33%;transition:left .3s cubic-bezier(.4,0,.2,1)}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{from{opacity:0;transform:scale(.87)}to{opacity:1;transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+@keyframes pulseRing{0%{transform:scale(1);opacity:.8}70%{transform:scale(1.3);opacity:0}100%{transform:scale(1.3);opacity:0}}
+@keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes waveBar{0%,100%{height:5px}50%{height:18px}}
+@keyframes starPop{from{opacity:0;transform:scale(0) rotate(-20deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+
+/* ── PROGRESS BAR ── */
+.prog-wrap{background:var(--card);border-radius:12px;border:1px solid var(--bdr);padding:10px 14px;margin-bottom:8px;flex-shrink:0}
+.prog-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.prog-lbl{font-size:12px;font-weight:700}
+.prog-score{font-size:12px;font-weight:700;color:var(--muted)}
+.prog-bar{height:7px;border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* ── COMMON ── */
+.q-counter{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.feedback{border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;text-align:center;animation:popIn .25s cubic-bezier(.4,0,.2,1);display:none;flex-shrink:0;margin-top:6px}
+.feedback.ok-fb{background:var(--ok-l);color:#065F46;border:1.5px solid #34D399}
+.feedback.ng-fb{background:var(--ng-l);color:#991B1B;border:1.5px solid #FCA5A5}
+.action-btn{width:100%;padding:13px;color:#FFF;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;flex-shrink:0;margin-top:8px;display:none}
+.action-btn:active{transform:scale(.97)}
+
+/* ── RESULT MODAL ── */
+.clear-modal{position:fixed;inset:0;background:rgba(30,41,59,.6);z-index:900;display:flex;align-items:center;justify-content:center;padding:1.5rem}
+.clear-card{background:var(--card);border-radius:22px;padding:28px 22px 22px;text-align:center;max-width:320px;width:100%;animation:popIn .3s cubic-bezier(.4,0,.2,1)}
+.clear-emoji{font-size:48px;margin-bottom:10px;display:block}
+.clear-title{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px}
+.clear-msg{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.clear-stats{display:flex;justify-content:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.stat-pill{font-size:12px;font-weight:700;padding:5px 12px;border-radius:99px}
+.nxt-lvl-btn{width:100%;padding:13px;color:#FFF;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer}
+.stars-row{display:flex;justify-content:center;gap:6px;margin-bottom:12px}
+.star{font-size:26px;animation:starPop .4s ease both}
+.star:nth-child(1){animation-delay:.1s}.star:nth-child(2){animation-delay:.25s}.star:nth-child(3){animation-delay:.4s}
+
+/* ── CONFETTI ── */
+#confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999}
+
+/* ══════════════════════════════════════
+   VOCAB SCREEN
+   ══════════════════════════════════════ */
+#hdr-vocab{background:var(--pri)}
+#screen-vocab .prog-lbl{color:var(--pri)}
+#screen-vocab .prog-bar{background:var(--pri-l)}
+#screen-vocab .prog-fill{background:var(--pri)}
+
+.v-word-area{
+  background:var(--card);border-radius:14px;border:1px solid var(--bdr);
+  padding:14px 16px;margin-bottom:8px;text-align:center;flex-shrink:0;
+}
+.v-word{
+  font-family:'Lora',Georgia,serif;font-size:32px;font-weight:700;font-style:italic;
+  color:var(--pri);padding:8px 0 4px;letter-spacing:.5px;
+}
+.v-hint{font-size:13px;color:var(--muted);padding-bottom:4px}
+
+/* 4択グリッド — flex:1 で余白を均等に使う */
+.choices-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:8px;flex:1;
+}
+.choice-btn{
+  background:var(--bg);border:2px solid var(--bdr);border-radius:12px;
+  padding:0 10px;
+  font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--text);
+  cursor:pointer;transition:all .18s;text-align:center;line-height:1.3;
+  display:flex;align-items:center;justify-content:center;
+}
+.choice-btn:active:not(:disabled){transform:scale(.97)}
+.choice-btn.correct{background:var(--ok-l);border-color:var(--ok);color:#065F46}
+.choice-btn.wrong{background:var(--ng-l);border-color:var(--ng);color:#991B1B;animation:shake .3s ease}
+#v-next{background:var(--pri)}
+
+/* ══════════════════════════════════════
+   LISTEN SCREEN
+   ══════════════════════════════════════ */
+#hdr-listen{background:var(--pri);display:none}
+#screen-listen .prog-lbl{color:var(--pri)}
+#screen-listen .prog-bar{background:var(--pri-l)}
+#screen-listen .prog-fill{background:var(--pri)}
+
+.l-phrase-card{
+  background:var(--card);border-radius:14px;border:1px solid var(--bdr);
+  padding:12px 16px;margin-bottom:8px;text-align:center;flex-shrink:0;
+}
+.l-jp{font-family:'Baloo 2',sans-serif;font-size:19px;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.4}
+.l-hint{font-size:12px;color:var(--muted);margin-bottom:10px}
+.speak-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--pri);color:#FFF;border:none;border-radius:50px;
+  padding:9px 20px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;
+  cursor:pointer;transition:all .2s;
+}
+.speak-btn.playing{background:#0891B2}
+.replay-wrap{margin-top:7px}
+.replay-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:none;border:1.5px solid var(--bdr);border-radius:50px;
+  padding:6px 14px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;
+  color:var(--muted);cursor:pointer;
+}
+
+/* 選択肢リスト — flex:1 で縦方向を均等に埋める */
+.listen-choices{
+  display:flex;flex-direction:column;
+  gap:7px;flex:1;
+}
+.listen-choice{
+  flex:1;
+  background:var(--bg);border:2px solid var(--bdr);border-radius:11px;
+  padding:0 14px;
+  font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--text);
+  cursor:pointer;transition:all .18s;text-align:left;
+  display:flex;align-items:center;line-height:1.4;
+}
+.listen-choice:active:not(:disabled){transform:translateX(2px)}
+.listen-choice.correct{background:var(--ok-l);border-color:var(--ok);color:#065F46}
+.listen-choice.wrong{background:var(--ng-l);border-color:var(--ng);color:#991B1B;animation:shake .3s ease}
+.c-alpha{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:50%;
+  background:var(--bdr);color:var(--muted);
+  font-family:'Lora',Georgia,serif;font-size:13px;font-weight:700;font-style:italic;
+  margin-right:10px;flex-shrink:0;
+}
+.listen-choice.correct .c-alpha{background:var(--ok);color:#FFF}
+.listen-choice.wrong .c-alpha{background:var(--ng);color:#FFF}
+#l-next{background:var(--pri)}
+
+/* ══════════════════════════════════════
+   SHADOW SCREEN
+   ══════════════════════════════════════ */
+#hdr-shadow{background:var(--pur);display:none}
+#screen-shadow .prog-lbl{color:var(--pur)}
+#screen-shadow .prog-bar{background:var(--pur-l)}
+#screen-shadow .prog-fill{background:var(--pur)}
+
+.s-phrase-card{
+  background:var(--card);border-radius:14px;border:1px solid var(--bdr);
+  padding:12px 16px;margin-bottom:8px;text-align:center;flex-shrink:0;
+}
+.s-en{font-family:'Lora',Georgia,serif;font-size:15px;font-weight:600;font-style:italic;color:var(--pur);line-height:1.75;margin-bottom:4px}
+.s-jp{font-size:13px;color:var(--muted);margin-bottom:10px}
+.play-row{display:flex;align-items:center;justify-content:center;gap:8px}
+.play-btn{display:inline-flex;align-items:center;gap:6px;background:var(--pri);color:#FFF;border:none;border-radius:50px;padding:9px 18px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s}
+.play-btn.playing{background:#0891B2}
+.slow-btn{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1.5px solid var(--bdr);border-radius:50px;padding:9px 12px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer}
+.slow-btn.active{border-color:var(--pri);color:var(--pri);background:var(--pri-l)}
+
+.mic-area{text-align:center;padding:16px 0;}
+.mic-outer{position:relative;display:inline-flex;align-items:center;justify-content:center;width:80px;height:80px;margin-bottom:6px;}
+.mic-ring{position:absolute;inset:0;border-radius:50%;border:3px solid var(--pur);opacity:0}
+.mic-ring.active{animation:pulseRing 1.2s ease-out infinite}
+.mic-core{width:66px;height:66px;border-radius:50%;background:var(--pur);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;position:relative;z-index:1;transition:all .2s}
+.mic-core.recording{background:#DC2626;animation:micPulse .6s ease infinite}
+.mic-ico{font-size:28px;color:#FFF}
+.wave-bars{display:inline-flex;align-items:center;gap:3px;height:24px;margin:6px 0;}
+.wave-bar{width:3px;height:5px;background:var(--pur);border-radius:99px;opacity:.4}
+.wave-bar.active{opacity:1;animation:waveBar .5s ease infinite}
+.wave-bar:nth-child(1){animation-delay:0s}.wave-bar:nth-child(2){animation-delay:.1s}
+.wave-bar:nth-child(3){animation-delay:.2s}.wave-bar:nth-child(4){animation-delay:.1s}
+.wave-bar:nth-child(5){animation-delay:0s}
+.mic-lbl{font-size:12px;font-weight:700;color:var(--muted)}
+.mic-lbl.recording{color:#DC2626}
+
+.transcript-box{background:var(--pur-l);border:1.5px solid #C4B5FD;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;color:#4C1D95;text-align:center;display:none;flex-shrink:0;margin-top:4px}
+.shadow-result{border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;text-align:center;animation:popIn .25s ease;display:none;flex-shrink:0;margin-top:4px}
+.shadow-result.perfect{background:var(--ok-l);color:#065F46;border:1.5px solid #34D399;font-size:14px}
+.shadow-result.good{background:var(--pri-l);color:#1E3A8A;border:1.5px solid #93C5FD}
+.shadow-result.try-fb{background:var(--ng-l);color:#991B1B;border:1.5px solid #FCA5A5}
+.match-detail{font-size:11px;font-weight:600;opacity:.8;margin-top:3px}
+.s-action-row{display:flex;gap:8px;margin-top:8px;margin-bottom:4px;}
+.retry-btn{flex:1;padding:12px;background:var(--bg);color:var(--pur);border:2px solid var(--pur);border-radius:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer}
+.shadow-next-btn{flex:1;padding:12px;background:var(--pur);color:#FFF;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer}
+
+/* ── RESULT SCREEN (inline, スクロールなし) ── */
+.result-screen{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;padding:1rem;gap:6px;
+}
+.result-emoji{font-size:56px;line-height:1}
+.result-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:700;color:var(--text)}
+.result-msg{font-size:13px;color:var(--muted);line-height:1.6;max-width:280px}
+.result-stat{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:800;padding:9px 18px;border-radius:999px}
+.restart-btn{padding:13px 0;color:#FFF;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;width:100%;max-width:280px}
+</style>
+</head>
+<body>
+<canvas id="confetti-canvas"></canvas>
+<div id="app">
+
+  <!-- HEADERS -->
+  <div class="hdr" id="hdr-vocab" style="background:var(--pri)">
+    <span class="hdr-title">🌟 BizEnglish</span>
+    <span class="hdr-badge" id="vocab-badge">LEVEL 1</span>
+  </div>
+  <div class="hdr" id="hdr-listen" style="background:var(--pri);display:none">
+    <span class="hdr-title">🎧 リスニング</span>
+    <span class="hdr-badge" id="listen-badge">LEVEL 1</span>
+  </div>
+  <div class="hdr" id="hdr-shadow" style="background:var(--pur);display:none">
+    <span class="hdr-title">🗣️ シャドーイング</span>
+    <span class="hdr-badge" id="shadow-badge">LEVEL 1</span>
+  </div>
+
+  <!-- ===== VOCAB SCREEN ===== -->
+  <div class="screen active" id="screen-vocab">
+    <!-- progress -->
+    <div class="prog-wrap">
+      <div class="prog-row">
+        <span class="prog-lbl" id="v-lv-text">Level 1 — ビジネス初級</span>
+        <span class="prog-score" id="v-score">0 / 10</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" id="v-fill" style="width:0%"></div></div>
+    </div>
+    <!-- word card -->
+    <div class="v-word-area">
+      <div class="q-counter" id="v-counter">QUESTION 1 OF 10</div>
+      <div class="v-word" id="v-word">meeting</div>
+      <div class="v-hint" id="v-hint">この単語の意味は？</div>
+    </div>
+    <!-- 4 choices fills remaining height -->
+    <div class="choices-grid" id="v-choices"></div>
+    <!-- feedback + next appear below choices -->
+    <div class="feedback" id="v-feedback"></div>
+    <button class="action-btn" id="v-next" style="background:var(--pri)">次の問題へ →</button>
+  </div>
+
+  <!-- ===== LISTEN SCREEN ===== -->
+  <div class="screen" id="screen-listen">
+    <div class="prog-wrap">
+      <div class="prog-row">
+        <span class="prog-lbl" id="l-lv-text" style="color:var(--pri)">Level 1 — リスニング</span>
+        <span class="prog-score" id="l-score">0 / 10</span>
+      </div>
+      <div class="prog-bar" style="background:var(--pri-l)"><div class="prog-fill" id="l-fill" style="width:0%;background:var(--pri)"></div></div>
+    </div>
+    <div class="l-phrase-card">
+      <div class="q-counter" id="l-counter">QUESTION 1 OF 10</div>
+      <div class="l-jp" id="l-jp">—</div>
+      <div class="l-hint">🔊 音声を聞いて正しい英文を選ぼう</div>
+      <button class="speak-btn" id="l-play-btn" onclick="listenPlay()">
+        <i class="ti ti-volume" style="font-size:15px"></i>音声を再生
+      </button>
+      <div class="replay-wrap">
+        <button class="replay-btn" id="l-replay-btn" style="display:none" onclick="listenPlay()">
+          <i class="ti ti-refresh" style="font-size:13px"></i>もう一度聞く
+        </button>
+      </div>
+    </div>
+    <!-- choices fill remaining height -->
+    <div class="listen-choices" id="l-choices"></div>
+    <div class="feedback" id="l-feedback"></div>
+    <button class="action-btn" id="l-next" style="background:var(--pri)">次の問題へ →</button>
+  </div>
+
+  <!-- ===== SHADOW SCREEN ===== -->
+  <div class="screen" id="screen-shadow">
+    <div class="prog-wrap">
+      <div class="prog-row">
+        <span class="prog-lbl" id="s-lv-text" style="color:var(--pur)">Level 1 — シャドーイング</span>
+        <span class="prog-score" id="s-score">0 / 8</span>
+      </div>
+      <div class="prog-bar" style="background:var(--pur-l)"><div class="prog-fill" id="s-fill" style="width:0%;background:var(--pur)"></div></div>
+    </div>
+    <div class="s-phrase-card">
+      <div class="q-counter" id="s-counter">PHRASE 1 OF 8</div>
+      <div class="s-en" id="s-en">—</div>
+      <div class="s-jp" id="s-jp">—</div>
+      <div class="play-row">
+        <button class="play-btn" id="s-play-btn" onclick="shadowPlay()">
+          <i class="ti ti-player-play" style="font-size:14px"></i>お手本を聞く
+        </button>
+        <button class="slow-btn" id="s-slow-btn" onclick="shadowToggleSlow()">
+          <i class="ti ti-clock" style="font-size:13px"></i>ゆっくり
+        </button>
+      </div>
+    </div>
+    <!-- mic area fills remaining height -->
+    <div class="mic-area">
+      <div class="mic-outer">
+        <div class="mic-ring" id="s-ring"></div>
+        <button class="mic-core" id="s-mic" onclick="shadowToggleRec()">
+          <i class="ti ti-microphone mic-ico"></i>
+        </button>
+      </div>
+      <div class="wave-bars">
+        <div class="wave-bar" id="sw0"></div><div class="wave-bar" id="sw1"></div>
+        <div class="wave-bar" id="sw2"></div><div class="wave-bar" id="sw3"></div>
+        <div class="wave-bar" id="sw4"></div>
+      </div>
+      <span class="mic-lbl" id="s-mic-lbl">押して話す</span>
+    </div>
+    <div class="transcript-box" id="s-transcript"></div>
+    <div class="shadow-result" id="s-result">
+      <div id="s-result-msg"></div>
+      <div class="match-detail" id="s-match"></div>
+    </div>
+    <div class="s-action-row" id="s-actions" style="display:none">
+      <button class="retry-btn" onclick="shadowRetry()">もう一度 🔄</button>
+      <button class="shadow-next-btn" onclick="shadowNext()">次へ →</button>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <nav class="tab-bar" style="position:relative">
+    <div class="tab-indicator" id="tab-ind" style="left:0;background:var(--pri)"></div>
+    <button class="tab-item active" id="tab-vocab" onclick="switchTab('vocab')">
+      <i class="ti ti-books t-ico"></i><span class="t-lbl">英単語</span>
+    </button>
+    <button class="tab-item" id="tab-listen" onclick="switchTab('listen')">
+      <i class="ti ti-headphones t-ico"></i><span class="t-lbl">リスニング</span>
+    </button>
+    <button class="tab-item" id="tab-shadow" onclick="switchTab('shadow')">
+      <i class="ti ti-microphone t-ico"></i><span class="t-lbl">シャドーイング</span>
+    </button>
+  </nav>
+</div>
+
+<!-- VOCAB CLEAR MODAL -->
+<div class="clear-modal" id="vocab-clear" style="display:none">
+  <div class="clear-card">
+    <span class="clear-emoji" id="vc-emoji">🎉</span>
+    <div class="stars-row"><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span></div>
+    <p class="clear-title" id="vc-title">Level 1 クリア！</p>
+    <p class="clear-msg" id="vc-msg">素晴らしい！</p>
+    <div class="clear-stats">
+      <span class="stat-pill" id="vc-score-pill" style="background:var(--pri-l);color:var(--pri)">正解 10/10</span>
+      <span class="stat-pill" id="vc-lv-pill" style="background:var(--pri-l);color:var(--pri)">LEVEL 1</span>
+    </div>
+    <button class="nxt-lvl-btn" id="vocab-nxt-lvl" style="background:var(--pri)" onclick="vocabNextLevel()">次のレベルへ 🚀</button>
+  </div>
+</div>
+
+<script>
+/* ── SHARED ── */
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function rand(a){return a[Math.floor(Math.random()*a.length)];}
+
+let sVoices=[];
+function loadVoices(){
+  if(!window.speechSynthesis)return;
+  sVoices=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en'));
+  if(!sVoices.length)speechSynthesis.addEventListener('voiceschanged',()=>{sVoices=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en'));});
+}
+function speak(text,rate,cb){
+  if(!window.speechSynthesis){if(cb)cb();return;}
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='en-US';u.rate=rate||0.85;u.pitch=1;
+  const v=sVoices.find(x=>x.lang==='en-US'&&x.name.includes('Google'))||sVoices.find(x=>x.lang==='en-US')||sVoices[0];
+  if(v)u.voice=v;
+  if(cb)u.onend=cb;
+  speechSynthesis.speak(u);
+}
+
+function launchConfetti(){
+  const cv=document.getElementById('confetti-canvas'),ctx=cv.getContext('2d');
+  cv.width=window.innerWidth;cv.height=window.innerHeight;
+  const cols=['#2563EB','#F59E0B','#10B981','#EF4444','#7C3AED','#EC4899','#06B6D4'];
+  const p=Array.from({length:120},()=>({x:Math.random()*cv.width,y:-10-Math.random()*180,size:5+Math.random()*7,color:rand(cols),speed:3+Math.random()*4,angle:Math.random()*360,spin:(Math.random()-.5)*6,drift:(Math.random()-.5)*2,opacity:1,shape:Math.random()>.5?'rect':'circle'}));
+  let f=0;(function draw(){ctx.clearRect(0,0,cv.width,cv.height);p.forEach(q=>{ctx.save();ctx.globalAlpha=q.opacity;ctx.translate(q.x,q.y);ctx.rotate(q.angle*Math.PI/180);ctx.fillStyle=q.color;if(q.shape==='rect')ctx.fillRect(-q.size/2,-q.size/4,q.size,q.size/2);else{ctx.beginPath();ctx.arc(0,0,q.size/2,0,Math.PI*2);ctx.fill();}ctx.restore();q.y+=q.speed;q.x+=q.drift;q.angle+=q.spin;if(f>80)q.opacity-=0.012;});f++;if(f<160)requestAnimationFrame(draw);else ctx.clearRect(0,0,cv.width,cv.height);})();
+}
+
+/* ── TAB SWITCHING ── */
+function switchTab(tab){
+  ['vocab','listen','shadow'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('screen-'+t).classList.toggle('active',t===tab);
+    document.getElementById('hdr-'+t).style.display=t===tab?'flex':'none';
+  });
+  const i={vocab:0,listen:1,shadow:2}[tab];
+  const ind=document.getElementById('tab-ind');
+  ind.style.left=i*33.33+'%';
+  ind.style.background=tab==='shadow'?'var(--pur)':'var(--pri)';
+}
+
+/* ══════════════════════════════════════
+   VOCAB
+   ══════════════════════════════════════ */
+const VOCAB_ALL=[
+  {w:"meeting",h:"会議のこと",c:["会議","書類","電話","昼食"],a:0},
+  {w:"agenda",h:"会議の議題リスト",c:["名刺","議題リスト","報告書","契約書"],a:1},
+  {w:"confirm",h:"確かめる動作",c:["取り消す","提案する","確認する","延期する"],a:2},
+  {w:"deadline",h:"締め切りのこと",c:["締め切り","会議室","始業時間","出張"],a:0},
+  {w:"proposal",h:"新しい計画を提出するもの",c:["請求書","提案書","領収書","名簿"],a:1},
+  {w:"schedule",h:"予定や日程",c:["予算","予定","成果","評価"],a:1},
+  {w:"report",h:"情報をまとめた文書",c:["報告書","申請書","名刺","送り状"],a:0},
+  {w:"client",h:"サービスを受ける側の人",c:["上司","顧客","同僚","部下"],a:1},
+  {w:"budget",h:"使えるお金の計画",c:["予算","売上","損失","融資"],a:0},
+  {w:"project",h:"目的のある仕事の単位",c:["部署","プロジェクト","会議","規則"],a:1},
+  {w:"task",h:"やるべき個別の仕事",c:["目標","役職","タスク","給与"],a:2},
+  {w:"team",h:"一緒に働く集まり",c:["競合","チーム","規則","評価"],a:1},
+  {w:"manager",h:"チームを率いる人",c:["新入社員","管理職","顧客","株主"],a:1},
+  {w:"salary",h:"毎月もらう給与",c:["賞与","給与","手当","経費"],a:1},
+  {w:"overtime",h:"規定時間を超えて働くこと",c:["有給休暇","残業","夜勤","育休"],a:1},
+  {w:"contract",h:"取引の条件を定めた書類",c:["名簿","契約書","企画書","議事録"],a:1},
+  {w:"invoice",h:"取引の請求書",c:["契約書","請求書","見積書","領収書"],a:1},
+  {w:"negotiate",h:"条件をすり合わせること",c:["署名する","交渉する","拒否する","発注する"],a:1},
+  {w:"delegate",h:"仕事を他者に任せること",c:["委任する","監視する","報告する","達成する"],a:0},
+  {w:"revenue",h:"会社の売上",c:["収益","費用","損失","負債"],a:0},
+  {w:"strategy",h:"長期的な達成計画",c:["戦術","戦略","指示","評価"],a:1},
+  {w:"profit",h:"売上から費用を引いた残り",c:["利益","損失","費用","税金"],a:0},
+  {w:"presentation",h:"相手に内容を説明する発表",c:["会議","プレゼン","面談","交渉"],a:1},
+  {w:"feedback",h:"評価や改善のコメント",c:["フィードバック","クレーム","指示","命令"],a:0},
+  {w:"approval",h:"上司などが認めること",c:["却下","承認","検討","保留"],a:1},
+  {w:"target",h:"達成すべき数値や目標",c:["予算","ターゲット","実績","成果"],a:1},
+  {w:"priority",h:"最初に取り組むべき重要度",c:["優先度","期限","目標","手順"],a:0},
+  {w:"workflow",h:"業務の流れや手順",c:["組織図","ワークフロー","名簿","規則"],a:1},
+  {w:"colleague",h:"同じ職場で働く人",c:["顧客","同僚","部下","取引先"],a:1},
+  {w:"minutes",h:"会議の内容を記録したもの",c:["時間","議事録","ノート","メモ"],a:1},
+  {w:"leverage",h:"優位性を活かして活用する",c:["活用する","妥協する","延長する","削減する"],a:0},
+  {w:"benchmark",h:"比較の基準となる指標",c:["達成率","基準値","売上高","在庫"],a:1},
+  {w:"synergy",h:"複数が組み合わさった相乗効果",c:["競争","相乗効果","分業","単独"],a:1},
+  {w:"stakeholder",h:"事業の利害関係者",c:["株主","利害関係者","顧客","取引先"],a:1},
+  {w:"KPI",h:"目標達成を測る主要指標",c:["主要業績評価指標","売上目標","利益率","市場占有率"],a:0},
+  {w:"ROI",h:"投資に対する利益の割合",c:["投資利益率","販売管理費","損益分岐点","運転資本"],a:0},
+  {w:"scalable",h:"規模を柔軟に拡大できる性質",c:["拡張可能な","固定された","限定的な","一時的な"],a:0},
+  {w:"pivot",h:"事業の方向性を大きく転換すること",c:["方向転換","継続","拡大","縮小"],a:0},
+  {w:"outsource",h:"業務を外部に委託すること",c:["アウトソース","インソース","オフショア","リソース"],a:0},
+  {w:"compliance",h:"法令・規則を守ること",c:["法令遵守","規模拡大","業務改善","人材採用"],a:0},
+  {w:"asset",h:"会社が持つ経済的な財産",c:["資産","負債","費用","損失"],a:0},
+  {w:"cash flow",h:"一定期間の現金の流れ",c:["キャッシュフロー","損益計算","貸借対照表","有価証券"],a:0},
+  {w:"forecast",h:"将来の業績を予測すること",c:["業績予測","実績報告","予算管理","戦略立案"],a:0},
+  {w:"margin",h:"売上から費用を引いた利益幅",c:["利益率","費用率","回転率","稼働率"],a:0},
+  {w:"B2B",h:"企業が企業に売るビジネス",c:["企業間取引","個人向け販売","小売","直販"],a:0},
+  {w:"SaaS",h:"クラウド型のソフトウェア提供モデル",c:["クラウドサービス","パッケージソフト","組み込みソフト","オープンソース"],a:0},
+  {w:"NDA",h:"情報を外部に漏らさない合意書",c:["秘密保持契約","業務委託契約","売買契約","雇用契約"],a:0},
+  {w:"onboarding",h:"新入社員や新顧客を受け入れるプロセス",c:["オンボーディング","オフボーディング","リテンション","チャーン"],a:0},
+  {w:"lead",h:"見込み顧客のこと",c:["見込み客","既存客","休眠客","離脱客"],a:0},
+  {w:"conversion",h:"見込み客が顧客になること",c:["コンバージョン","インプレッション","クリック","セッション"],a:0},
+  {w:"pitch",h:"投資家や顧客への簡潔な提案",c:["ピッチ","プレゼン","デモ","プロトタイプ"],a:0},
+  {w:"market share",h:"市場全体での自社の売上比率",c:["市場占有率","成長率","回転率","稼働率"],a:0},
+  {w:"USP",h:"他社にない独自の強みや特徴",c:["独自の売り","共通の特徴","業界標準","基本機能"],a:0},
+  {w:"A/B test",h:"2つのパターンを比較する実験",c:["A/Bテスト","ユーザーテスト","回帰分析","コホート分析"],a:0},
+  {w:"retention",h:"顧客や社員を引き留めること",c:["リテンション","アクイジション","チャーン","ターンオーバー"],a:0},
+  {w:"remote work",h:"オフィス以外で働くスタイル",c:["テレワーク","シフト勤務","出張","宿泊勤務"],a:0},
+  {w:"sprint",h:"アジャイルの短い開発期間",c:["スプリント","フェーズ","マイルストーン","エポック"],a:0},
+  {w:"milestone",h:"プロジェクトの重要な節目",c:["マイルストーン","タスク","バックログ","スプリント"],a:0},
+  {w:"OKR",h:"目標と主要な成果指標のフレームワーク",c:["目標と成果指標","業績評価制度","人事評価","給与体系"],a:0},
+  {w:"accountability",h:"結果に責任を持つこと",c:["説明責任","権限委譲","情報共有","目標設定"],a:0},
+  {w:"transparency",h:"情報をオープンにする文化",c:["透明性","秘密主義","情報管理","データ保護"],a:0},
+  {w:"turnover",h:"社員が辞めて入れ替わる比率",c:["離職率","採用率","昇進率","定着率"],a:0},
+  {w:"bonus",h:"基本給以外の追加報酬",c:["ボーナス","基本給","手当","昇給"],a:0},
+  {w:"stock option",h:"将来一定価格で株を買える権利",c:["ストックオプション","配当金","優先株","社債"],a:0},
+  {w:"valuation",h:"会社の価値をお金で評価すること",c:["企業評価","市場分析","財務分析","投資分析"],a:0},
+  {w:"burn rate",h:"毎月使い切る現金の速度",c:["資金消費率","収益成長率","利益率","回転率"],a:0},
+  {w:"LTV",h:"顧客が生涯にわたって生む価値",c:["顧客生涯価値","顧客獲得費用","顧客満足度","解約率"],a:0},
+  {w:"CAC",h:"新規顧客を獲得するためのコスト",c:["顧客獲得費用","顧客維持費用","広告費用","運営費用"],a:0},
+  {w:"gross margin",h:"売上から売上原価を引いた利益率",c:["粗利益率","営業利益率","経常利益率","純利益率"],a:0},
+  {w:"P&L",h:"収益と費用をまとめた損益計算書",c:["損益計算書","貸借対照表","CF計算書","株主資本計算書"],a:0},
+  {w:"supply chain",h:"原材料から顧客に届くまでの流れ",c:["サプライチェーン","バリューチェーン","フードチェーン","プロセスチェーン"],a:0},
+  {w:"procurement",h:"必要な物資やサービスを調達すること",c:["調達","販売","製造","配送"],a:0},
+  {w:"vendor",h:"商品やサービスを供給する業者",c:["ベンダー","バイヤー","ディストリビューター","リセラー"],a:0},
+  {w:"SLA",h:"サービスの品質水準を定めた合意",c:["サービスレベル合意","機密保持合意","業務委託合意","売買合意"],a:0},
+  {w:"PDCA",h:"計画・実行・評価・改善のサイクル",c:["PDCAサイクル","OODAループ","KPIツリー","バランスドスコアカード"],a:0},
+  {w:"SWOT",h:"強み・弱み・機会・脅威の分析",c:["SWOT分析","PEST分析","5フォース分析","3C分析"],a:0},
+  {w:"4P",h:"製品・価格・流通・プロモーションの戦略",c:["4Pマーケティング","3C分析","SWOT分析","BCGマトリクス"],a:0},
+  {w:"core competency",h:"他社に真似できない企業の中核的強み",c:["コアコンピタンス","コアバリュー","ミッション","ビジョン"],a:0},
+  {w:"blue ocean",h:"競争のない新市場を開拓する戦略",c:["ブルーオーシャン","レッドオーシャン","ホワイトスペース","ニッチ市場"],a:0},
+  {w:"innovation",h:"新しいアイデアで価値を生み出すこと",c:["イノベーション","インプルーブメント","モディフィケーション","ストリームライニング"],a:0},
+  {w:"MVP",h:"最低限の機能を持つ初期製品",c:["実用最小限の製品","最終製品","改良版","完成品"],a:0},
+  {w:"persona",h:"ターゲットユーザーを具体化した仮想人物像",c:["ペルソナ","プロファイル","セグメント","コホート"],a:0},
+  {w:"UX",h:"製品を使う際の体験全体",c:["ユーザー体験","ユーザー調査","インターフェース","ワイヤーフレーム"],a:0},
+  {w:"API",h:"システム間でデータをやり取りする仕組み",c:["連携インターフェース","データベース","サーバー","クラウド"],a:0},
+  {w:"ESG",h:"環境・社会・ガバナンスへの取り組み",c:["環境社会ガバナンス","企業の社会的責任","SDGs","カーボンニュートラル"],a:0},
+  {w:"diversity",h:"様々な背景を持つ人が共存すること",c:["多様性","均質性","統一性","同質性"],a:0},
+  {w:"well-being",h:"心身ともに健康で充実した状態",c:["ウェルビーイング","ストレス","バーンアウト","メンタルヘルス"],a:0},
+  {w:"growth mindset",h:"努力で能力は伸びると信じる考え方",c:["成長志向","固定思考","防衛思考","回避思考"],a:0},
+  {w:"upskilling",h:"現在の仕事に必要なスキルを高めること",c:["スキルアップ","スキルダウン","リスキリング","スキルセット"],a:0},
+  {w:"reskilling",h:"新しい分野のスキルを学び直すこと",c:["リスキリング","スキルアップ","マルチスキル","スキルマップ"],a:0},
+  {w:"action item",h:"会議で決まった具体的なやるべきこと",c:["アクションアイテム","アジェンダ","議事録","ネクストステップ"],a:0},
+  {w:"pain point",h:"顧客や業務が抱える課題や不満",c:["ペインポイント","ゲインポイント","タッチポイント","ピポットポイント"],a:0},
+  {w:"deliverable",h:"プロジェクトで納品すべき成果物",c:["成果物","目標","プロセス","フィードバック"],a:0},
+  {w:"escalation",h:"問題を上位層に報告・対応を求めること",c:["エスカレーション","デリゲーション","クロスファンクション","フォールバック"],a:0},
+  {w:"CRM",h:"顧客情報を管理するシステム",c:["顧客管理システム","ERP","HRM","SCM"],a:0},
+  {w:"automation",h:"手作業を機械やソフトが代わりに行うこと",c:["自動化","手動化","外注","内製"],a:0},
+  {w:"digital transformation",h:"デジタル技術で事業や業務を変革すること",c:["デジタルトランスフォーメーション","デジタル化","IT化","オートメーション"],a:0},
+  {w:"NPS",h:"顧客が友人に勧める意欲を測る指標",c:["顧客推奨度","顧客満足度","顧客ロイヤリティ","顧客獲得数"],a:0},
+  {w:"MRR",h:"毎月の定期的な収益",c:["月次定期収益","年次収益","一時収益","変動収益"],a:0},
+  {w:"churn rate",h:"一定期間内に解約した顧客の割合",c:["解約率","新規率","維持率","転換率"],a:0},
+  {w:"SEO",h:"検索エンジンで上位に表示されるための最適化",c:["検索最適化","有料広告","SNS運用","メルマガ"],a:0},
+  {w:"upsell",h:"より上位の製品を勧めること",c:["アップセル","ダウンセル","クロスセル","バンドル"],a:0},
+  {w:"pipeline",h:"商談が進んでいる案件の一覧",c:["パイプライン","ファネル","チャネル","バックログ"],a:0},
+];
+
+const PRAISE=["🎉 Brilliant! You nailed it!","🌟 Outstanding! You're on fire!","🏆 Excellent! Keep it up!","💪 Fantastic! You're a star!","🚀 Amazing! You're unstoppable!","✨ Perfect! You're a genius!","🎯 Spot on! Incredible work!","🥳 Wonderful! You blew my mind!","🔥 Superb! You're crushing it!","👑 Magnificent! Truly impressive!"];
+const CLEAR_MSGS=["完璧です！あなたはビジネス英語の天才かもしれません！","素晴らしい！全問クリアで次のレベルへ進む資格十分です！","脅威の正解率！この調子でどんどん上を目指しましょう！","もはや敵なし！次のステージもあなたなら余裕です！"];
+const LV_NAMES=["ビジネス初級","ビジネス中級","ビジネス上級","エキスパート","マスター","レジェンド"];
+const PER_LV=10;
+let vShuf=[],vLvl=1,vIdx=0,vScore=0,vAnswered=false;
+
+function vLvlName(){return LV_NAMES[Math.min(Math.floor((vLvl-1)/3),LV_NAMES.length-1)];}
+function vGetQ(){return vShuf[(((vLvl-1)*PER_LV)+vIdx)%vShuf.length];}
+function vShufChoices(q){const it=q.c.map((t,i)=>({t,ok:i===q.a}));for(let i=it.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[it[i],it[j]]=[it[j],it[i]];}return it;}
+
+function vocabInit(){vShuf=shuffle(VOCAB_ALL);vLvl=1;vIdx=0;vScore=0;vocabRender();}
+function vocabRender(){
+  vAnswered=false;
+  const q=vGetQ(),tot=PER_LV;
+  document.getElementById('vocab-badge').textContent='LEVEL '+vLvl;
+  document.getElementById('v-lv-text').textContent='Level '+vLvl+' — '+vLvlName();
+  document.getElementById('v-score').textContent=vScore+' / '+tot;
+  document.getElementById('v-fill').style.width=Math.round(vScore/tot*100)+'%';
+  document.getElementById('v-counter').textContent='QUESTION '+(vIdx+1)+' OF '+tot;
+  document.getElementById('v-word').textContent=q.w;
+  document.getElementById('v-hint').textContent=q.h;
+  const fb=document.getElementById('v-feedback');fb.style.display='none';
+  const nb=document.getElementById('v-next');nb.style.display='none';
+  const choices=vShufChoices(q);
+  const grid=document.getElementById('v-choices');grid.innerHTML='';
+  choices.forEach(ch=>{
+    const b=document.createElement('button');b.className='choice-btn';b.textContent=ch.t;
+    b.onclick=()=>vocabAnswer(ch.ok,b,choices);grid.appendChild(b);
+  });
+}
+function vocabAnswer(ok,el,choices){
+  if(vAnswered)return;vAnswered=true;
+  document.querySelectorAll('#v-choices .choice-btn').forEach(b=>b.disabled=true);
+  const fb=document.getElementById('v-feedback'),nb=document.getElementById('v-next');
+  if(ok){
+    el.classList.add('correct');vScore++;
+    document.getElementById('v-score').textContent=vScore+' / '+PER_LV;
+    document.getElementById('v-fill').style.width=Math.round(vScore/PER_LV*100)+'%';
+    fb.textContent=rand(PRAISE);fb.className='feedback ok-fb';
+  } else {
+    el.classList.add('wrong');
+    document.querySelectorAll('#v-choices .choice-btn').forEach(b=>{if(choices.find(c=>c.t===b.textContent&&c.ok))b.classList.add('correct');});
+    fb.innerHTML='😅 惜しい！正解は「'+choices.find(c=>c.ok).t+'」です。';fb.className='feedback ng-fb';
+  }
+  fb.style.display='block';nb.style.display='block';
+  const isLast=vIdx===PER_LV-1;
+  nb.textContent=isLast?'ステージ完了！🎊':'次の問題へ →';
+  nb.onclick=isLast?vocabClear:()=>{vIdx++;vocabRender();};
+}
+function vocabClear(){
+  document.getElementById('vc-emoji').textContent=rand(['🎉','🏆','🚀','🌟','🥇']);
+  document.getElementById('vc-title').textContent='Level '+vLvl+' クリア！';
+  document.getElementById('vc-msg').textContent=rand(CLEAR_MSGS);
+  document.getElementById('vc-score-pill').textContent='正解 '+vScore+'/'+PER_LV;
+  document.getElementById('vc-lv-pill').textContent='LEVEL '+vLvl;
+  document.getElementById('vocab-clear').style.display='flex';
+  launchConfetti();
+}
+function vocabNextLevel(){
+  document.getElementById('vocab-clear').style.display='none';
+  vLvl++;vIdx=0;vScore=0;vocabRender();
+}
+vocabInit();
+
+/* ══════════════════════════════════════
+   LISTEN
+   ══════════════════════════════════════ */
+const LISTEN_Q=[
+  {jp:"会議を始めましょう。",en:"Let's get the meeting started.",w:["I'd like to book a conference room.","Please send me the agenda.","Can we reschedule the meeting?"]},
+  {jp:"ご確認いただけますか？",en:"Could you please confirm that?",w:["I'll send you a follow-up email.","Let me check the schedule.","Please approve the request."]},
+  {jp:"締め切りはいつですか？",en:"When is the deadline?",w:["What is the agenda for today?","Who is in charge of this project?","Can you attend the conference?"]},
+  {jp:"ご提案をありがとうございます。",en:"Thank you for your proposal.",w:["I apologize for the delay.","Please review the attached document.","We need to finalize the budget."]},
+  {jp:"少々お待ちください。",en:"Please hold on for a moment.",w:["I'll get back to you shortly.","Let's move on to the next point.","Could you repeat that, please?"]},
+  {jp:"資料を添付しました。",en:"I've attached the document.",w:["The report is due tomorrow.","Could you forward me that file?","Please print the handouts."]},
+  {jp:"ご連絡をお待ちしております。",en:"I look forward to hearing from you.",w:["Please reply at your earliest convenience.","I will follow up with you next week.","Thank you for your quick response."]},
+  {jp:"この件についてご相談したいです。",en:"I'd like to discuss this matter with you.",w:["Could we set up a call this week?","Let me know your availability.","I'll prepare the presentation slides."]},
+  {jp:"ご不便をおかけして申し訳ありません。",en:"I apologize for the inconvenience.",w:["We appreciate your patience.","Please let us know if you have any concerns.","We will resolve this issue immediately."]},
+  {jp:"議題に戻りましょう。",en:"Let's get back on track.",w:["Shall we take a short break?","Who wants to go first?","Can we wrap up for today?"]},
+  {jp:"予算を確認する必要があります。",en:"We need to review the budget.",w:["Please submit your expense report.","The invoice has been approved.","Can you provide a cost estimate?"]},
+  {jp:"来週までに報告書を提出してください。",en:"Please submit the report by next week.",w:["The meeting has been rescheduled.","I'll send you the minutes shortly.","Could you proofread this document?"]},
+  {jp:"担当者は誰ですか？",en:"Who is responsible for this?",w:["What is your job title?","How many people are on your team?","When did you join the company?"]},
+  {jp:"ご意見をお聞かせください。",en:"Please share your thoughts.",w:["Could you summarize the key points?","What is your recommendation?","Do you have any objections?"]},
+  {jp:"プロジェクトは順調に進んでいます。",en:"The project is on track.",w:["We hit a major roadblock yesterday.","The launch date has been pushed back.","We are behind schedule."]},
+  {jp:"ご返答をお待ちしています。",en:"I'm waiting for your reply.",w:["Please acknowledge receipt of this email.","Let me know if you need anything else.","Your feedback is greatly appreciated."]},
+  {jp:"詳細を教えていただけますか？",en:"Could you give me more details?",w:["Please clarify your requirements.","Can you elaborate on that point?","What exactly do you mean?"]},
+  {jp:"今週中に決定する必要があります。",en:"We need to make a decision by end of week.",w:["Let's table this for next quarter.","I'll need more time to think about it.","We should consult legal first."]},
+  {jp:"打ち合わせをセットアップしましょう。",en:"Let's set up a meeting.",w:["I'll send you a calendar invite.","Are you free for a quick call?","Let me check if the room is available."]},
+  {jp:"スケジュールを調整できますか？",en:"Can we adjust the schedule?",w:["Please block my calendar for Friday.","I have a conflict this afternoon.","Let's reschedule to next Monday."]},
+];
+const L_PRAISE=["🎉 Brilliant! Perfect listening!","🌟 Outstanding! You got it!","🏆 Excellent! Sharp ears!","💪 Fantastic! You're on fire!","🚀 Amazing! Keep it up!","✨ Perfect! You're a star!","🎯 Spot on! Incredible!","🥳 Wonderful! You nailed it!"];
+const ALPHAS=['A','B','C','D'];
+let lShuf=[],lIdx=0,lScore=0,lAnswered=false,lLvl=1,lCurQ=null;
+
+function listenStart(){lShuf=shuffle(LISTEN_Q).slice(0,10);lIdx=0;lScore=0;listenRender();}
+function listenRender(){
+  lAnswered=false;lCurQ=lShuf[lIdx];
+  const tot=lShuf.length;
+  document.getElementById('listen-badge').textContent='LEVEL '+lLvl;
+  document.getElementById('l-lv-text').textContent='Level '+lLvl+' — リスニング';
+  document.getElementById('l-score').textContent=lScore+' / '+tot;
+  document.getElementById('l-fill').style.width=Math.round(lScore/tot*100)+'%';
+  document.getElementById('l-counter').textContent='QUESTION '+(lIdx+1)+' OF '+tot;
+  document.getElementById('l-jp').textContent=lCurQ.jp;
+  const pb=document.getElementById('l-play-btn');
+  pb.classList.remove('playing');pb.innerHTML='<i class="ti ti-volume" style="font-size:15px"></i>音声を再生';
+  document.getElementById('l-replay-btn').style.display='none';
+  const fb=document.getElementById('l-feedback');fb.style.display='none';
+  const nb=document.getElementById('l-next');nb.style.display='none';
+  const choices=shuffle([lCurQ.en,...lCurQ.w]);
+  const grid=document.getElementById('l-choices');grid.innerHTML='';
+  choices.forEach((c,i)=>{
+    const b=document.createElement('button');b.className='listen-choice';
+    b.dataset.correct=String(c===lCurQ.en);
+    b.innerHTML=`<span class="c-alpha">${ALPHAS[i]}</span>${c}`;
+    b.onclick=()=>listenAnswer(b,choices);
+    grid.appendChild(b);
+  });
+  setTimeout(()=>listenPlay(),400);
+}
+function listenPlay(){
+  const pb=document.getElementById('l-play-btn');
+  if(pb){pb.classList.add('playing');pb.innerHTML='<i class="ti ti-volume" style="font-size:15px"></i>再生中...';}
+  speak(lCurQ.en,0.85,()=>{
+    const b=document.getElementById('l-play-btn');
+    if(b){b.classList.remove('playing');b.innerHTML='<i class="ti ti-volume" style="font-size:15px"></i>音声を再生';}
+    const r=document.getElementById('l-replay-btn');if(r)r.style.display='inline-flex';
+  });
+}
+function listenAnswer(el,choices){
+  if(lAnswered)return;lAnswered=true;
+  document.querySelectorAll('.listen-choice').forEach(b=>b.disabled=true);
+  const isOk=el.dataset.correct==='true';
+  const fb=document.getElementById('l-feedback'),nb=document.getElementById('l-next');
+  if(isOk){
+    el.classList.add('correct');lScore++;
+    document.getElementById('l-score').textContent=lScore+' / '+lShuf.length;
+    document.getElementById('l-fill').style.width=Math.round(lScore/lShuf.length*100)+'%';
+    fb.textContent=rand(L_PRAISE);fb.className='feedback ok-fb';
+  } else {
+    el.classList.add('wrong');
+    document.querySelectorAll('.listen-choice').forEach(b=>{if(b.dataset.correct==='true')b.classList.add('correct');});
+    fb.innerHTML='😅 惜しい！正解: <strong style="color:#065F46">'+lCurQ.en+'</strong>';fb.className='feedback ng-fb';
+  }
+  fb.style.display='block';nb.style.display='block';
+  const isLast=lIdx===lShuf.length-1;
+  nb.textContent=isLast?'結果を見る 🎊':'次の問題へ →';
+  nb.onclick=isLast?listenResult:()=>{lIdx++;listenRender();};
+}
+function listenResult(){
+  const tot=lShuf.length,pct=Math.round(lScore/tot*100);
+  let emoji,title,msg;
+  if(lScore===tot){emoji='🏆';title='パーフェクト！！';msg='全問正解！あなたはビジネス英語リスニングマスターです！';lLvl++;launchConfetti();}
+  else if(lScore>=Math.ceil(tot*0.6)){emoji='🌟';title='よくできました！';msg='かなりの実力です！もう少しで満点に届きますよ。';}
+  else{emoji='💪';title='ナイストライ！';msg:'まだまだこれから！繰り返し聞いて耳を鍛えよう。';}
+  document.getElementById('listen-badge').textContent='LEVEL '+lLvl;
+  // result画面をflex列で表示
+  const scr=document.getElementById('screen-listen');
+  scr.innerHTML=`
+    <div class="result-screen">
+      <div class="result-emoji">${emoji}</div>
+      <div class="stars-row">
+        <span class="star">${lScore>=4?'⭐':'☆'}</span>
+        <span class="star">${lScore>=7?'⭐':'☆'}</span>
+        <span class="star">${lScore>=10?'⭐':'☆'}</span>
+      </div>
+      <p class="result-title">${title}</p>
+      <p class="result-msg">${msg}</p>
+      <div class="result-stat" style="background:var(--pri-l);color:var(--pri)">🎧 ${lScore} / ${tot} 正解（${pct}%）</div>
+      <button class="restart-btn" style="background:var(--pri)" onclick="listenRestart()">もう一度チャレンジ 🔄</button>
+    </div>
+  `;
+}
+function listenRestart(){
+  // screen-listenを再構築
+  const scr=document.getElementById('screen-listen');
+  scr.innerHTML=`
+    <div class="prog-wrap">
+      <div class="prog-row">
+        <span class="prog-lbl" id="l-lv-text" style="color:var(--pri)">Level 1 — リスニング</span>
+        <span class="prog-score" id="l-score">0 / 10</span>
+      </div>
+      <div class="prog-bar" style="background:var(--pri-l)"><div class="prog-fill" id="l-fill" style="width:0%;background:var(--pri)"></div></div>
+    </div>
+    <div class="l-phrase-card">
+      <div class="q-counter" id="l-counter">QUESTION 1 OF 10</div>
+      <div class="l-jp" id="l-jp">—</div>
+      <div class="l-hint">🔊 音声を聞いて正しい英文を選ぼう</div>
+      <button class="speak-btn" id="l-play-btn" onclick="listenPlay()">
+        <i class="ti ti-volume" style="font-size:15px"></i>音声を再生
+      </button>
+      <div class="replay-wrap">
+        <button class="replay-btn" id="l-replay-btn" style="display:none" onclick="listenPlay()">
+          <i class="ti ti-refresh" style="font-size:13px"></i>もう一度聞く
+        </button>
+      </div>
+    </div>
+    <div class="listen-choices" id="l-choices"></div>
+    <div class="feedback" id="l-feedback"></div>
+    <button class="action-btn" id="l-next" style="background:var(--pri)">次の問題へ →</button>
+  `;
+  listenStart();
+}
+listenStart();
+
+/* ══════════════════════════════════════
+   SHADOW — 100 SHORT STORIES + AI AUTO-GENERATE
+   ══════════════════════════════════════ */
+
+/* 100 ビジネス会話ショートストーリー（約1〜2分で読めるもの） */
+const SHADOW_ALL=[
+  {
+    title:"Meeting Kick-off",
+    jp:"会議のキックオフ",
+    en:"Good morning, everyone. Thanks for joining today's meeting. Let's get started. First, I'd like to go over the agenda. We have three main topics to discuss: the project timeline, the budget update, and the team assignments. I'll keep things moving so we finish on time. Please feel free to ask questions at any point."
+  },
+  {
+    title:"Project Status Update",
+    jp:"プロジェクト進捗報告",
+    en:"Hi team. I wanted to give you a quick update on where we stand with the project. Overall, we're on track. The development phase is about seventy percent complete, and we're expecting to wrap it up by the end of next week. However, we've identified a few minor issues with the testing environment that we're currently working to resolve. I'll keep everyone posted as we make progress."
+  },
+  {
+    title:"Client Call Introduction",
+    jp:"クライアント電話の挨拶",
+    en:"Hello, this is Sarah from Global Solutions. Thank you for taking the time to speak with us today. We've been looking forward to this call. I'd like to start by briefly introducing our team. With me today are our project manager, Tom, and our lead engineer, Lisa. We're excited to learn more about your needs and explore how we can work together effectively."
+  },
+  {
+    title:"Budget Review",
+    jp:"予算レビュー",
+    en:"Thank you for joining the budget review session. As you can see from the report, our total spend for Q3 came in slightly over budget. The main drivers were the increased software licensing costs and the additional headcount we brought on in July. Going forward, I'd like to propose a few cost-saving measures. First, we should consider consolidating our software subscriptions. Second, we should review our vendor contracts for better rates."
+  },
+  {
+    title:"Onboarding New Employee",
+    jp:"新入社員のオンボーディング",
+    en:"Welcome to the company! We're really glad to have you on board. Over the next two weeks, you'll be going through our onboarding program. This includes orientation sessions, meetings with key team members, and some hands-on training. Don't hesitate to ask questions — we want you to feel comfortable and confident as quickly as possible. My door is always open if you need anything."
+  },
+  {
+    title:"Sales Pitch Opening",
+    jp:"営業提案の冒頭",
+    en:"Thank you for the opportunity to present today. Our company has been helping businesses like yours streamline their operations for over fifteen years. What we offer is not just software — it's a complete solution tailored to your specific challenges. Today, I'd like to walk you through three key areas: how we identify your pain points, what our solution looks like in practice, and the results our current clients are seeing."
+  },
+  {
+    title:"Performance Review",
+    jp:"業績評価面談",
+    en:"Thank you for coming in today. This is your mid-year performance review, and I want to make it a two-way conversation. I'll share my observations first, and then I'd love to hear your perspective. Overall, you've had a strong first half of the year. You consistently meet your deadlines, your communication with the team is excellent, and the quality of your work is high. There are a couple of areas where I think there's room for growth, and I'd like to discuss those with you."
+  },
+  {
+    title:"Deadline Reminder",
+    jp:"締め切りリマインダー",
+    en:"Hi everyone. Just a quick reminder that the quarterly report is due this Friday at five PM. Please make sure all your data is submitted to the shared drive by Thursday afternoon so that we have time to compile everything. If you have any issues meeting the deadline, please let me know as soon as possible so we can figure out a solution. I appreciate everyone's hard work on this."
+  },
+  {
+    title:"Conference Call Wrap-up",
+    jp:"電話会議の締めくくり",
+    en:"Alright, I think we've covered all the main points for today. Let me quickly summarize the action items. Tom will send out the revised proposal by Wednesday. Lisa will coordinate with the design team to finalize the mockups. And I will follow up with the client by end of day tomorrow. Does anyone have any final questions before we close? No? Great. Thanks everyone for a productive session. Talk soon."
+  },
+  {
+    title:"Handling a Complaint",
+    jp:"クレーム対応",
+    en:"Thank you for bringing this to our attention. I sincerely apologize for the inconvenience this has caused you. I completely understand your frustration, and I want to assure you that we take this matter very seriously. We are investigating the issue right now, and I expect to have a resolution for you within twenty-four hours. In the meantime, I'd like to offer you a complimentary service as a gesture of goodwill. Again, I'm sorry for the trouble."
+  },
+  {
+    title:"Negotiating a Contract",
+    jp:"契約交渉",
+    en:"Thank you for sending over the draft contract. We've reviewed it carefully, and overall we're happy with most of the terms. However, there are a couple of points we'd like to revisit. First, the payment schedule — we'd prefer to move to a net forty-five terms instead of net thirty. Second, the exclusivity clause on page seven seems overly broad. We'd like to narrow its scope to the specific region mentioned in our original discussions. Can we set up a call to go through these points together?"
+  },
+  {
+    title:"Introducing a New Product",
+    jp:"新製品の紹介",
+    en:"We're very excited to introduce our latest product, ConnectPro. This is a cloud-based collaboration platform designed specifically for remote and hybrid teams. What makes it different from other tools on the market is its AI-powered workflow automation, which can save your team up to five hours per week. It integrates seamlessly with the tools you already use, including Slack, Salesforce, and Google Workspace. We'll be offering a free thirty-day trial for all new sign-ups."
+  },
+  {
+    title:"Apologizing for a Delay",
+    jp:"遅延のお詫び",
+    en:"I'm reaching out to let you know about a delay in the delivery of your order. I sincerely apologize for this. The delay was caused by an unexpected issue with our shipping partner, and we're working to resolve it as quickly as possible. Your order is now expected to arrive by next Tuesday. As an apology, we'd like to offer you a fifteen percent discount on your next purchase. Thank you for your patience and understanding."
+  },
+  {
+    title:"Team Brainstorm Session",
+    jp:"チームブレインストーミング",
+    en:"Okay, let's get the ideas flowing. The goal for today's brainstorm is to come up with at least ten new concepts for the marketing campaign. There are no bad ideas at this stage — we want quantity, not perfection. Just call out your thoughts and I'll put them on the board. We'll have about twenty minutes for this phase, then we'll narrow down to the top three and discuss how to develop them further. Who wants to start?"
+  },
+  {
+    title:"Requesting Feedback",
+    jp:"フィードバックのお願い",
+    en:"Hi, I've just shared the first draft of the proposal with you. I'd really appreciate your feedback before I send it to the client. Specifically, I'd like to know if the value proposition is clear, whether the pricing section makes sense, and if the overall tone is appropriate. Please don't hold back — I want honest input. If you could get back to me by tomorrow afternoon, that would be great. Thanks so much for your help."
+  },
+  {
+    title:"Delegation of Tasks",
+    jp:"業務の割り振り",
+    en:"Now that the project has been approved, I'd like to assign responsibilities. Mike, I'd like you to take the lead on the technical architecture. Please prepare a preliminary design by next Monday. Yuki, can you handle the client communication for this project? You'll be our main point of contact. And David, I need you to manage the timeline and keep track of all milestones. Let's schedule a sync every Thursday morning to check progress. Any questions?"
+  },
+  {
+    title:"Explaining Company Policy",
+    jp:"社内規定の説明",
+    en:"I'd like to take a few minutes to walk you through our expense reimbursement policy. All business expenses must be submitted within thirty days of the purchase. You'll need to attach original receipts for any expense over fifty dollars. Meals with clients must include a note explaining the business purpose. Reimbursements are processed on the fifteenth of each month. If you have questions about whether a particular expense is eligible, please check with your manager before submitting."
+  },
+  {
+    title:"Announcing a Promotion",
+    jp:"昇進の発表",
+    en:"I'm very pleased to announce that James has been promoted to Senior Manager of the Product Development team effective from the first of next month. James has been with us for six years, and during that time he has consistently demonstrated exceptional leadership, technical skill, and commitment to our company values. His work on the platform redesign project was outstanding and directly contributed to our record sales this quarter. Please join me in congratulating him."
+  },
+  {
+    title:"Discussing Strategy",
+    jp:"戦略について議論",
+    en:"Looking ahead to next year, I'd like us to think carefully about our growth strategy. Currently, our main revenue comes from the domestic market. But we believe there's a significant opportunity to expand into Southeast Asia. The market research we've done suggests strong demand for our type of product, particularly in Vietnam and Thailand. I'd like to propose a phased approach — starting with a pilot program in one country, learning from that, and then scaling. What are your thoughts on this direction?"
+  },
+  {
+    title:"Presenting Data Results",
+    jp:"データ結果の発表",
+    en:"Let me take you through the results of our latest customer survey. We received responses from over two thousand customers, which is a response rate of about thirty-five percent — higher than we expected. The overall satisfaction score came in at four point two out of five, which is up from three point eight last year. The areas customers are most happy with are our customer support and product reliability. The area with the most room for improvement is our onboarding experience, which only scored three point one."
+  },
+  {
+    title:"Remote Work Policy",
+    jp:"リモートワーク方針",
+    en:"Following our review of the past year, I'm happy to announce that we'll be moving to a permanent hybrid work model. Going forward, employees will be expected to come into the office on Tuesdays and Thursdays. The remaining days are flexible — you can work from home or come in if you prefer. We ask that you are reachable during core hours, which are nine AM to three PM. We'll also continue to provide a home office allowance to help you set up a comfortable workspace."
+  },
+  {
+    title:"Crisis Communication",
+    jp:"危機対応コミュニケーション",
+    en:"I want to address the data security incident that occurred last night. I know many of you have questions, and I want to be as transparent as possible. At approximately eleven PM, our security team detected unauthorized access to one of our servers. We immediately took the affected system offline and launched an investigation. At this time, we believe the breach was limited and that no customer payment data was accessed. We have informed the relevant authorities and are working with external cybersecurity experts. We will provide a full update by tomorrow morning."
+  },
+  {
+    title:"Partnership Proposal",
+    jp:"パートナーシップ提案",
+    en:"Thank you for meeting with us today. We believe there's a strong case for a strategic partnership between our two companies. Your expertise in logistics combined with our technology platform creates a natural synergy. Together, we could offer a more complete solution to our shared target market. What we're proposing is a co-marketing agreement initially, with the possibility of deeper integration down the road. We'd like to start with a joint pilot program in Q1 and evaluate the results before committing to a longer-term arrangement."
+  },
+  {
+    title:"Quarterly Business Review",
+    jp:"四半期ビジネスレビュー",
+    en:"Welcome to our Q3 business review. Let me give you the highlights. Revenue came in at twelve point three million, which is three percent above our target. Our customer acquisition cost dropped by eight percent thanks to the improvements we made to our digital marketing campaigns. However, churn rate ticked up slightly, from two point one percent to two point four percent. We need to focus on retention in Q4. I'll walk through each of these points in detail and then we'll open the floor for discussion."
+  },
+  {
+    title:"Giving a Presentation",
+    jp:"プレゼンテーションの実施",
+    en:"Good afternoon, everyone. Today I'll be presenting our proposal for the new customer portal. My presentation will take about fifteen minutes, followed by time for questions. I'll cover three areas: the current challenges our customers face, our proposed solution, and the expected timeline and costs. Please hold your questions until the end so we can keep things moving. Alright, let's dive in. The first challenge our customers tell us about is..."
+  },
+  {
+    title:"Conflict Resolution",
+    jp:"コンフリクト解決",
+    en:"I'd like to address the disagreement that came up in yesterday's meeting. I understand there are different perspectives on how we should proceed, and I think it's important that we resolve this constructively. Let's each take a few minutes to clearly state our position without interruption. Then we'll look for common ground and decide on a path forward together. The goal is not to win the argument — it's to find the best solution for the team and the project. Can we agree on that approach?"
+  },
+  {
+    title:"Salary Negotiation",
+    jp:"給与交渉",
+    en:"Thank you for the opportunity to discuss my compensation. Based on my research into current market rates for my role and experience level, as well as the contributions I've made to the team over the past year, I'd like to propose a salary increase. I've brought the data to support this request. Over the past twelve months, I successfully led three major projects, brought in two new clients, and helped reduce our operational costs by fifteen percent. I believe a ten percent increase would reflect the value I bring to the organization."
+  },
+  {
+    title:"Vendor Evaluation",
+    jp:"ベンダー評価",
+    en:"We've completed our evaluation of the three vendors who submitted proposals. Let me share our findings. Vendor A offers the lowest price but their implementation timeline is six months, which is too long for our needs. Vendor B has the most comprehensive features and a strong track record, but they came in twenty percent over budget. Vendor C is mid-range on price, meets our timeline requirements, and has very positive client references. Based on all factors, we're recommending Vendor C as our preferred partner."
+  },
+  {
+    title:"Handling Resignation",
+    jp:"退職対応",
+    en:"I appreciate you coming to me directly with this news. I respect your decision, and I'm glad you've had this opportunity come up. Before you go, I'd like to make sure we handle the transition smoothly. Can we agree on a last working day? I'd also like to ask you to help document your key responsibilities and ongoing projects so we can hand them over properly. And of course, if there's anything we can do to make your remaining time here a positive experience, please let me know."
+  },
+  {
+    title:"Investor Update",
+    jp:"投資家向けアップデート",
+    en:"Thank you for joining our investor update call. I'm pleased to report that we're making strong progress toward our annual targets. Monthly recurring revenue has grown by twenty-two percent year to date, and we recently crossed the one million dollar MRR milestone. Customer retention is at an all-time high of ninety-four percent. On the product side, we launched three major features in Q3 and have received very positive feedback. We're well-positioned for a strong Q4, and I'll now hand over to our CFO for the detailed financials."
+  },
+  {
+    title:"Feedback on Presentation",
+    jp:"プレゼンへのフィードバック",
+    en:"Thanks for presenting that proposal — I could tell you put a lot of work into it. Overall, the content was solid and the data was compelling. I have a few suggestions that I think will make it even stronger. First, the opening could be more impactful — try leading with the problem statement rather than the background information. Second, the slide with the financial projections felt a bit crowded. Try splitting it into two slides. And finally, when you present this to the executives, practice speaking a bit more slowly — you have a tendency to rush when you're nervous."
+  },
+  {
+    title:"Announcing Restructuring",
+    jp:"組織再編の発表",
+    en:"I want to speak with you all directly about some changes to our organizational structure. As our company has grown, we've identified the need to realign our teams to better serve our customers and achieve our strategic goals. Starting next month, the marketing and sales teams will be combined into a single Revenue team under one leadership structure. This change is designed to improve collaboration and speed up our go-to-market process. I know change can be unsettling, and I want to make sure everyone has the chance to ask questions."
+  },
+  {
+    title:"Explaining a Technical Issue",
+    jp:"技術的な問題の説明",
+    en:"I wanted to update you on the system outage that occurred this morning. At around eight-thirty AM, our primary database server experienced a memory overflow, which caused the application to become unresponsive for approximately forty-five minutes. Our engineering team was alerted immediately and resolved the issue by nine-fifteen. All services are now fully restored. We've identified the root cause — a scheduled batch job that was not optimized — and we're implementing a fix to prevent this from happening again. We'll send a full incident report by end of day."
+  },
+  {
+    title:"Motivating the Team",
+    jp:"チームのモチベーションアップ",
+    en:"I want to take a moment to recognize the incredible effort this team has put in over the past month. Launching a new product is never easy, and you all went above and beyond to make it happen. The late nights, the weekend calls, the problem-solving under pressure — it all paid off. The launch was a success, and our customers are already responding positively. I'm truly proud of what we've built together. Now that we've caught our breath, I want to make sure we celebrate properly before diving into the next phase."
+  },
+  {
+    title:"Setting Expectations",
+    jp:"期待値の設定",
+    en:"As we kick off this project, I want to be clear about expectations. This is a high-priority initiative, and the leadership team will be watching our progress closely. We have three months to deliver a working prototype. That's an ambitious timeline, so we need to be disciplined about scope. If we start adding features that weren't in the original plan, we'll miss the deadline. My expectation is that the team flags any scope creep immediately so we can make a deliberate decision about whether to include it. Communication and transparency will be critical."
+  },
+  {
+    title:"Cross-Department Collaboration",
+    jp:"部門間連携",
+    en:"One of the challenges we've been hearing from both teams is that communication between product and engineering isn't as smooth as it could be. I'd like to propose a few changes to improve this. First, let's establish a weekly sync between the two teams every Monday morning. Second, I'd like to create a shared project tracking board so that both sides have visibility into priorities and progress. Third, whenever there's a major feature request, it should be discussed jointly before it's added to the roadmap. I believe these steps will reduce friction significantly."
+  },
+  {
+    title:"Customer Success Call",
+    jp:"カスタマーサクセス電話",
+    en:"Hi, this is Rachel from the customer success team. I'm checking in to see how things are going with your account. Have you had a chance to explore the new reporting features we released last month? I think they might be particularly useful for your use case. Also, I noticed that your team's usage has dropped slightly over the past few weeks, and I wanted to make sure everything is running smoothly. Is there anything you're finding difficult or any features you're not sure how to use? I'm here to help make sure you're getting the most out of the platform."
+  },
+  {
+    title:"Closing a Sales Deal",
+    jp:"商談のクロージング",
+    en:"It's been a pleasure working with you over these past few weeks. I believe we've addressed all your key concerns, and I'm confident our solution is the right fit for your team. I'd like to move forward and finalize the agreement. I'll have our legal team send over the contract today. The implementation team is ready to start as soon as the paperwork is signed, and we're targeting a go-live date of the first of next month. Is there anything else you need from our side before you're ready to sign?"
+  },
+  {
+    title:"Mentoring Session",
+    jp:"メンタリングセッション",
+    en:"I'm glad we could find time for this. Mentoring is something I feel strongly about, because having a good mentor earlier in my career made a huge difference for me. Today I'd like to start by hearing from you — what are your main goals for the next twelve months, and what do you feel are the biggest obstacles in your way? From there, we can think together about how to address those challenges and make a concrete plan. These sessions work best when they're driven by your agenda, so please speak openly."
+  },
+  {
+    title:"Town Hall Meeting",
+    jp:"タウンホールミーティング",
+    en:"Thank you all for being here today for our company-wide town hall. I want to start by acknowledging that this has been a challenging year for everyone, and I'm incredibly grateful for the resilience and dedication you've all shown. I'd like to use today's session to share our company results, outline our priorities for the coming year, and most importantly, answer your questions. There are no off-limit topics — this is a space for honest dialogue. Let's start with the year in review."
+  },
+  {
+    title:"Introducing Process Improvement",
+    jp:"プロセス改善の導入",
+    en:"After reviewing the feedback from last quarter's project, it's clear that we need to improve our internal processes, particularly around handoffs between teams. Currently, a lot of time is being lost when work moves from one team to another because expectations aren't clearly set. I'm proposing that we adopt a simple handoff checklist. It would include a summary of the work completed, any open issues, the next steps, and the responsible owner. It's a small change but I believe it will make a significant difference in our efficiency."
+  },
+  {
+    title:"Onsite Client Visit",
+    jp:"クライアント訪問",
+    en:"Welcome, and thank you so much for making the trip to visit us today. We're really excited to have you here in person. I've arranged for you to meet some of the key people working on your account. We'll start with a tour of our development center, then have lunch with the team, and finish with a strategy session in the afternoon. I want today to be as useful for you as possible, so please let me know if there's anything specific you'd like to see or discuss. Shall we get started?"
+  },
+  {
+    title:"Handling Miscommunication",
+    jp:"誤解の解消",
+    en:"I think there may have been a misunderstanding, and I'd like to clear it up. When I said the deadline was flexible, I meant we had a small buffer of a few days — I didn't mean the entire timeline was open-ended. I should have been clearer about that, and I apologize for the confusion. Going forward, I'll make sure to be more specific when discussing deadlines. For now, can we agree on a firm date so we're all aligned? I'd suggest we aim to complete this by next Friday at the latest."
+  },
+  {
+    title:"Annual Planning Session",
+    jp:"年間計画策定セッション",
+    en:"Today's session is about setting our priorities for next year. Before we dive in, I want to acknowledge that last year we took on too many initiatives and spread ourselves too thin. This year, I'd like us to focus on fewer things and do them exceptionally well. I've prepared a template for each team to evaluate their proposed initiatives against four criteria: strategic alignment, potential impact, resource requirements, and feasibility. Let's use this framework to narrow down our list to the top five company priorities."
+  },
+  {
+    title:"Discussing Career Development",
+    jp:"キャリア開発の話し合い",
+    en:"I'd like to talk about your career development and where you'd like to be in the next few years. You've been doing excellent work, and I want to make sure we're supporting your growth in the right direction. Are you interested in deepening your technical expertise, or is leadership something that appeals to you? I ask because the paths are quite different, and the opportunities we create for you should align with your goals. There's no wrong answer — what matters most is that we're intentional about your development."
+  },
+  {
+    title:"Presenting a Business Case",
+    jp:"ビジネスケースのプレゼン",
+    en:"I'd like to present a business case for investing in a new CRM system. Our current system is over eight years old and lacks several capabilities that are now standard in the industry. The limitations are affecting our sales team's productivity and our ability to track customer interactions effectively. I've evaluated three options at different price points. The recommended option requires an upfront investment of two hundred thousand dollars and a monthly subscription of three thousand dollars. Based on our projections, we expect to see a return on investment within eighteen months through improved conversion rates and reduced admin time."
+  },
+  {
+    title:"Change Management Communication",
+    jp:"変革管理のコミュニケーション",
+    en:"I know there have been a lot of questions about the upcoming changes to our workflow system. I want to address them head on. Yes, we are moving to a new platform in February, and yes, it will require some adjustment. But here's why I believe this change is worth it: the new system will save each team member an average of one hour per day on administrative tasks. That's five hours per week that you can redirect to the work that actually matters. We'll have training sessions throughout January, and there will be dedicated support available for the first month after launch."
+  },
+  {
+    title:"Discussing Market Expansion",
+    jp:"市場拡大の議論",
+    en:"I'd like to open a discussion about our international expansion strategy. Currently, ninety percent of our revenue comes from North America. While that market remains strong, we're seeing signs of saturation in some of our core segments. Europe and particularly the UK represent a natural first step for international expansion, given the language and regulatory similarities. We've been in conversations with two potential distribution partners in London. Before we go further, I'd like the team's input on the risks and opportunities we should be weighing."
+  },
+  {
+    title:"Product Roadmap Review",
+    jp:"製品ロードマップのレビュー",
+    en:"Let me walk you through our product roadmap for the next two quarters. In Q1, our primary focus is stability and performance. We'll be addressing the top ten issues raised by customers in our most recent survey, and we're investing heavily in infrastructure improvements. In Q2, we'll shift to growth features. We're planning three major releases: an advanced analytics dashboard, enhanced integrations with third-party tools, and a mobile app redesign. I'll also briefly mention a few items on our long-term horizon that we're researching but not yet committed to building."
+  },
+  {
+    title:"Welcoming a New Client",
+    jp:"新規クライアントの歓迎",
+    en:"On behalf of everyone at the company, I'd like to officially welcome you as our newest client. We're truly excited about this partnership and committed to delivering exceptional results for your team. Over the next few weeks, you'll be working closely with your dedicated account manager, who will guide you through the setup process and make sure you have everything you need to get started. We've also scheduled a kickoff call for next week to align on goals and timelines. Please don't hesitate to reach out at any time — we're here to support you."
+  },
+  {
+    title:"Running a Retrospective",
+    jp:"振り返り会の実施",
+    en:"Welcome to our sprint retrospective. The purpose of today's session is to reflect honestly on what went well, what didn't go as planned, and what we can do differently next time. Let's remember that this is a safe space — the goal is not to assign blame but to continuously improve as a team. I'll start with the positives, then we'll move to the challenges, and we'll finish by agreeing on two or three concrete actions for the next sprint. Who'd like to share a highlight from this sprint?"
+  },
+  {
+    title:"Explaining Layoffs",
+    jp:"レイオフの説明",
+    en:"I need to share some difficult news with you today. As a result of challenging market conditions and the need to adjust our cost structure, we have made the painful decision to reduce our workforce by ten percent. I want to be honest with you: this was not an easy decision, and it affects real people whose contributions have been valuable. Those impacted will be notified individually today and will receive a severance package, extended health benefits, and career transition support. For those of you remaining, I understand this creates uncertainty, and I want to address your questions directly."
+  },
+  {
+    title:"Strategy Alignment",
+    jp:"戦略の方向性合わせ",
+    en:"Before we go any further with planning, I want to make sure we're all aligned on our strategic priorities. It's easy to get pulled in different directions when there are so many opportunities in front of us, but focus is what's going to drive our success this year. I've distilled our strategy down to three pillars: deepen relationships with existing customers, expand into two new verticals, and build the operational capabilities needed to scale. Everything we do should connect back to at least one of these pillars. If it doesn't, we should seriously question whether it's worth doing."
+  },
+  {
+    title:"Discussing Diversity and Inclusion",
+    jp:"多様性と包括性の議論",
+    en:"I'd like to take some time today to talk about our diversity and inclusion initiatives. This is an area where I believe we have both a responsibility and an opportunity. Let me share where we currently stand. Our leadership team is sixty-eight percent male, and we have low representation from underrepresented groups in technical roles. We've set targets to improve these numbers over the next three years, and we have a concrete action plan that includes revised hiring practices, mentorship programs, and leadership development for underrepresented employees. I'd like to hear your thoughts on these initiatives."
+  },
+  {
+    title:"Negotiating a Raise",
+    jp:"昇給交渉",
+    en:"I appreciate you making time to meet with me. I'd like to discuss my compensation package. Over the past year, I've taken on significantly more responsibility than when my current salary was set. I've been leading a team of four, managing two of our largest client relationships, and contributing to the product strategy process. I've also done research on market rates for someone with my experience and responsibilities, and I believe there's a gap between my current salary and the market. I'd like to propose that we revisit my compensation to bring it in line with both my contributions and the market. Can we discuss what's possible?"
+  },
+  {
+    title:"Discussing ESG Initiatives",
+    jp:"ESGへの取り組み",
+    en:"Increasingly, our investors, customers, and employees are asking us about our commitment to environmental and social responsibility. I'm glad they are — this is something we should be leading on, not following. Let me share what we're doing. On the environmental side, we've committed to carbon neutrality by twenty thirty. We're reducing our office energy consumption and transitioning our server infrastructure to renewable energy providers. On the social side, we've launched a supplier diversity program and strengthened our community investment efforts. And on governance, we're strengthening our board's independence and improving our transparency in reporting."
+  },
+  {
+    title:"Product Launch Announcement",
+    jp:"製品発売の発表",
+    en:"I'm thrilled to announce that we'll be officially launching our new platform, Atlas, on the fifteenth of next month. This has been two years in the making, and I couldn't be prouder of the team that built it. Atlas addresses the core challenges our customers have been telling us about: fragmented data, slow reporting, and poor integration with existing tools. We've already signed up fifty beta users, and the feedback has been overwhelmingly positive. In the lead-up to launch, we'll be running a media campaign and hosting a live webinar. I'll share the full marketing plan with you all by end of week."
+  },
+  {
+    title:"Training Session Introduction",
+    jp:"研修セッションの導入",
+    en:"Welcome to today's training session on effective business communication. Over the next two hours, we'll cover written communication, verbal presentation skills, and how to give and receive feedback constructively. This training is interactive, so please come prepared to participate. We'll have role-play exercises, group discussions, and a short assessment at the end. I've also prepared a workbook for you to take away with frameworks and tips you can apply in your day-to-day work. Let's start by discussing what effective communication actually means in a professional context."
+  },
+  {
+    title:"Discussing Automation",
+    jp:"自動化の議論",
+    en:"One of the areas I want to focus on this year is automation. There are several manual processes in our operations that I believe we can automate, which would free up significant time for higher-value work. I've done an initial analysis and identified three quick wins. The first is automating our weekly reporting — currently it takes the team about six hours to compile, but with the right tooling it could be done in under thirty minutes. The second is automating our invoice processing. The third is streamlining our customer onboarding workflow. I'd like to form a small task force to evaluate these opportunities."
+  },
+  {
+    title:"Discussing Work-Life Balance",
+    jp:"ワークライフバランスについて",
+    en:"I want to have an open conversation about work-life balance on our team. I've noticed that many of you have been working very long hours, and while I appreciate the dedication, I'm concerned about sustainability. Burnout is real, and it affects both your wellbeing and your performance in the long run. I want to be clear: putting in extra hours should be the exception, not the norm. I'd like to work with each of you to review your current workload and make adjustments where needed. And I want you to feel safe saying when you have too much on your plate."
+  },
+  {
+    title:"Pitch to Investors",
+    jp:"投資家へのピッチ",
+    en:"Thank you for the opportunity to present. Let me get straight to the point. We are building the operating system for small business finance. Today, small business owners waste an average of fifteen hours per month on financial administration. Our platform reduces that to under three hours. We launched eighteen months ago and already have eight thousand paying customers, with monthly recurring revenue growing at twenty percent month over month. We're raising five million dollars to accelerate product development and expand our sales team. Our target market in North America alone represents a forty billion dollar opportunity."
+  },
+  {
+    title:"Reviewing a Contract",
+    jp:"契約書のレビュー",
+    en:"I've gone through the contract in detail and I have a few comments. The terms around intellectual property on page twelve concern me. As currently written, any work produced during the engagement period would belong entirely to your company, even for concepts developed independently by our team. I'd like to propose language that limits this to work produced specifically for this engagement. Additionally, the liability cap on page eighteen is set at one month's fees, which we feel is too low given the scope of work. Can we discuss raising it to three months? Those are our two main points."
+  },
+  {
+    title:"Building a Partnership",
+    jp:"パートナーシップの構築",
+    en:"I've been thinking about how our two companies could create more value together than we each do separately. Your distribution network is something that would take us years to build on our own, and our product fills a gap in your current portfolio. A formal reseller arrangement seems like a natural starting point. Here's what I'm proposing: you would offer our product to your existing customer base, earning a margin on each sale. We would provide full training and marketing support. And we'd set up a joint pipeline review every month. I think this could be significant for both of us."
+  },
+  {
+    title:"Internal Audit Preparation",
+    jp:"内部監査の準備",
+    en:"I want to make sure everyone is prepared for the internal audit scheduled for the end of the month. The audit team will be reviewing our financial records, procurement processes, and compliance with company policies. Here's what I need from each team: First, make sure all expense reports are submitted and approved. Second, verify that all vendor contracts are in the shared document repository. Third, be prepared to walk the auditors through your team's key processes. If you identify any gaps or discrepancies before the audit, please bring them to my attention immediately so we can address them proactively."
+  },
+  {
+    title:"Customer Renewal Conversation",
+    jp:"顧客更新の会話",
+    en:"Thank you for taking the time to speak with me about your renewal. I know you're evaluating your options, and I want to make sure we earn your continued business. Can you share what's been working well and what you feel could be better? I want to understand your perspective before I talk about what's new. I also want to address any concerns you have head-on. We've made some significant improvements to the platform since you signed up, and I'd love the chance to walk you through them. Our goal is to make sure you see clear, measurable value from our partnership."
+  },
+  {
+    title:"Launching a New Initiative",
+    jp:"新施策のローンチ",
+    en:"I'm excited to share that we're launching a new customer advisory board. The goal is to create a formal channel for our most engaged customers to influence our product roadmap and strategy. We're inviting twenty customers to join initially, and we'll host quarterly meetings — two virtual and two in-person per year. Members will get early access to new features, direct access to our product team, and a meaningful say in our priorities. We believe this will deepen our customer relationships and ensure we're building the right things. I'll be personally reaching out to the initial invitees this week."
+  },
+  {
+    title:"Digital Transformation",
+    jp:"デジタルトランスフォーメーション",
+    en:"Our digital transformation journey is one of the most important things we'll undertake as a company over the next three years. Let me be honest about where we are today: many of our core processes still rely on manual work and outdated systems, which slows us down and creates unnecessary errors. Our ambition is to digitize and automate at least seventy percent of our key workflows by the end of year three. This will require investment in technology, but more importantly, it will require a change in mindset. We all need to be open to new ways of working."
+  },
+  {
+    title:"Discussing Customer Feedback",
+    jp:"顧客フィードバックの議論",
+    en:"I want to share some important feedback we received from our NPS survey last quarter. Our overall score came in at forty-two, which is solid but below our target of fifty. When we look at the verbatim comments, a few themes emerge consistently. Customers love our product quality and our support team. However, they feel the onboarding process is too complex and that our documentation could be much clearer. These are actionable issues, and I'd like to form a working group to address them over the next two months. Who would be interested in being part of that effort?"
+  },
+  {
+    title:"Risk Assessment",
+    jp:"リスク評価",
+    en:"As part of our planning process, I've conducted a risk assessment for the upcoming project. I've identified four key risks that I believe warrant close attention. The first is vendor dependency — we're relying on a single supplier for a critical component, and any disruption in their operations would affect our timeline. The second is regulatory uncertainty in one of our target markets. The third is talent availability — we need to hire three specialized engineers and the market is competitive. And the fourth is the integration complexity with our legacy systems. For each risk, I've prepared a mitigation plan that I'd like to walk you through."
+  },
+  {
+    title:"Exit Interview",
+    jp:"退職面談",
+    en:"Thank you for agreeing to do this exit interview. I really value your candor, and I want you to know that this conversation is completely confidential. Your feedback will help us improve things for the people who remain. I have a few questions, but please feel free to share anything that comes to mind. First, what was the primary reason for your decision to leave? Second, was there anything we could have done differently that might have changed your decision? And third, looking back, what did you most enjoy about working here and what do you feel we could improve on as a workplace?"
+  },
+  {
+    title:"Scaling the Business",
+    jp:"事業のスケールアップ",
+    en:"We've proven that our model works. The question now is how to scale it efficiently. The three biggest levers we need to pull are: hiring the right people, systematizing our processes, and expanding our marketing reach. On hiring, we need to be disciplined — growth for the sake of growth leads to chaos. Let's focus on filling the roles that will have the highest leverage on our ability to deliver value to customers. On processes, anything we do more than twice should be documented and ideally automated. On marketing, we have a strong content strategy — now we need to invest in distribution to make sure it reaches the right audience."
+  },
+  {
+    title:"Discussing AI in the Workplace",
+    jp:"職場でのAI活用の議論",
+    en:"Artificial intelligence is transforming how work gets done, and I want to make sure we're thoughtful about how we adopt these tools. There's a lot of hype, but there are also real opportunities here. I've been experimenting with several AI tools over the past few months, and I see the most immediate value in three areas: summarizing long documents, drafting first versions of routine communications, and analyzing large datasets for patterns. What I want to avoid is using AI in ways that reduce quality or create new risks. I'd like us to develop a clear policy together — what we will use AI for, and where human judgment is essential."
+  },
+  {
+    title:"Supply Chain Discussion",
+    jp:"サプライチェーンの議論",
+    en:"Following the disruptions we experienced last year, I want to review our supply chain strategy. Our over-reliance on a small number of suppliers in a single region created significant vulnerabilities. Going forward, I'd like to implement a dual-sourcing policy for all critical components — meaning we should always have a primary and a secondary supplier for anything that would stop production if it became unavailable. I also want to increase our safety stock for the top twenty critical parts from two weeks to six weeks. These changes will increase costs in the short term, but the resilience benefits are worth it."
+  },
+  {
+    title:"Planning a Corporate Event",
+    jp:"企業イベントの計画",
+    en:"Let's start planning our annual company offsite. I'd like to hold it in mid-September — I'll send out a scheduling poll to find the best date. For the format, I'm thinking two days: the first day focused on strategy and planning, and the second day on team building and celebration. We should choose a venue outside the city to help people genuinely disconnect. I'd also like to involve the team in shaping the agenda — we'll set up a shared document where people can suggest topics they'd like to discuss. Our goal is for everyone to leave feeling aligned, energized, and connected."
+  },
+  {
+    title:"Data Privacy Policy",
+    jp:"データプライバシーポリシー",
+    en:"As our business grows, so does our responsibility to protect our customers' data. I want to walk you through the key principles of our data privacy policy. We collect only the data we need to deliver our service. We never sell customer data to third parties. We store data in accordance with GDPR and other applicable regulations. We notify customers promptly in the event of any breach. And we give customers full control over their data, including the right to request deletion at any time. I'd like every team member to complete the data privacy training by the end of the month."
+  },
+  {
+    title:"Technology Investment Discussion",
+    jp:"テクノロジー投資の議論",
+    en:"I'd like to discuss our technology investment priorities for next year. Our current tech stack is getting long in the tooth, and there are a few areas where we're genuinely constrained. The most pressing issue is our data infrastructure — we're making decisions based on reports that are often twenty-four to forty-eight hours out of date. Moving to a real-time data platform would transform our ability to respond quickly. The estimated cost is three hundred thousand dollars to implement, with an annual operating cost of eighty thousand dollars. I believe the business value — faster decisions, fewer errors, better customer insights — justifies this investment."
+  },
+  {
+    title:"Leadership Development",
+    jp:"リーダーシップ開発",
+    en:"I want to talk about how we're developing the next generation of leaders in this organization. Right now, we're too dependent on a small group of senior people, and we need to build depth. I'm proposing three initiatives. First, a formal mentoring program that pairs senior leaders with high-potential employees. Second, a leadership rotation program where promising employees spend six months in a different function to broaden their perspective. And third, we'll create more opportunities for emerging leaders to present to senior management — visibility matters for development. I'd appreciate your input on these ideas before we finalize the plan."
+  },
+  {
+    title:"Customer Complaint Resolution",
+    jp:"顧客クレームの解決",
+    en:"I've reviewed the complaint in detail and I want to address it directly. The customer is right — there was a failure in our process, and it led to a poor experience for them. Specifically, the handoff between the implementation team and the support team was not managed properly, which left the customer without adequate support during a critical period. Here's what I'd like to do: First, I'll personally call the customer today to apologize and explain what happened. Second, we'll offer them three months of complimentary premium support. Third, I'll work with both teams to fix the handoff process so this doesn't happen again."
+  },
+  {
+    title:"Presenting Market Research",
+    jp:"市場調査の発表",
+    en:"Let me share the key findings from our market research study. We conducted in-depth interviews with forty potential customers and an online survey of five hundred respondents. The central finding is that there's a clear unmet need in the mid-market segment. Mid-sized companies consistently report that enterprise solutions are too expensive and complex, while small business tools lack the features they need. They are willing to pay a premium for a solution that hits the sweet spot. The willingness-to-pay research suggests an average acceptable price point of around two hundred fifty dollars per month per team, which is well within our target range."
+  },
+  {
+    title:"Managing Up",
+    jp:"上司へのマネジメント",
+    en:"I wanted to check in with you about this project because I think it's important that you're fully informed and that I understand your priorities. I have three updates to share. First, the good news: we're ahead of schedule on the technical development. Second, a heads-up: we've identified a dependency on the legal team that might create a bottleneck if we don't address it soon. And third, I'd like your guidance on a decision about scope. We have the option to include an additional feature that would add two weeks to the timeline but potentially increase customer adoption significantly. I'd like your input on whether that tradeoff is worth it."
+  },
+  {
+    title:"Discussing Company Culture",
+    jp:"企業文化について",
+    en:"Culture is something we talk about a lot, but I want to be specific about what we mean. Our culture is defined not by what we say but by what we actually do. When we promote someone, what qualities do we reward? When we face a setback, how do we respond? When there's a conflict between doing what's easy and doing what's right, which do we choose? The culture we aspire to is one where people feel genuinely valued, where diverse perspectives are actively sought out, where mistakes are learning opportunities, and where we hold ourselves to high standards. Let's talk about where we're living up to that and where we're falling short."
+  },
+  {
+    title:"Quarterly Goal Setting",
+    jp:"四半期目標設定",
+    en:"Let's set our goals for Q2. Based on our annual targets, I'd like each team to commit to three to five measurable outcomes for the quarter. When defining your goals, please make sure they are specific, measurable, and time-bound. Avoid vague goals like 'improve customer satisfaction' and instead specify 'increase our NPS score from forty-two to forty-eight by June thirtieth.' I'd also like each goal to have a clearly named owner and a cadence for tracking progress. We'll do a mid-quarter check-in in mid-May and a final review at the start of July. Please submit your draft goals by end of week."
+  },
+  {
+    title:"Handling Underperformance",
+    jp:"業績不振への対応",
+    en:"I've asked you to meet with me today because I'm concerned about your recent performance, and I think it's important that we address it directly rather than let it continue. Over the past three months, you've missed several key deadlines, and I've received feedback from two colleagues about communication issues on shared projects. I want to start by hearing from you — are you aware of these concerns, and is there anything going on that I should know about? I'm not here to penalize you. I'm here because I believe in your potential and I want to help you get back on track. But I need you to be honest with me."
+  },
+  {
+    title:"Discussing Innovation Strategy",
+    jp:"イノベーション戦略の議論",
+    en:"Innovation doesn't happen by accident — it needs to be deliberately structured and resourced. I want to propose a few changes to how we approach innovation as a company. First, we should create a dedicated innovation budget — I'm suggesting five percent of annual revenue — that teams can apply for to explore new ideas. Second, we should hold a quarterly innovation day where everyone is given unstructured time to work on ideas outside their normal responsibilities. Third, we should establish a clear path from idea to experiment to decision, so that promising ideas don't get stuck. The goal is to create a culture where experimenting is valued even when it fails."
+  },
+  {
+    title:"Explaining Quarterly Results",
+    jp:"四半期結果の説明",
+    en:"I want to give you a clear picture of our Q2 results and what they mean for the rest of the year. Revenue was fourteen million dollars, which was in line with our forecast. Gross margin improved by two percentage points due to the pricing adjustments we implemented in April. However, we came in over budget on headcount costs — we hired ahead of plan in engineering, which was deliberate but impacted our profitability. Net income was one point two million, down from one point eight million in Q1. For the second half of the year, we're forecasting accelerating revenue growth as the investments we've made in sales and product start to pay off."
+  },
+  {
+    title:"Remote Team Management",
+    jp:"リモートチームのマネジメント",
+    en:"Managing a fully remote team requires a different approach than managing in-person. I want to share what I've learned from the past two years. First, communication needs to be more intentional and more frequent. When you can't rely on informal hallway conversations, you need structured touchpoints. I do a brief daily check-in with each team member and a weekly team meeting. Second, trust is everything. You can't manage by observation, so you need to hire people who are self-directed and set clear expectations for outcomes rather than activities. Third, culture requires active investment — celebrate wins publicly, create social channels for non-work conversation, and find ways to bring people together."
+  },
+  {
+    title:"Pricing Strategy Discussion",
+    jp:"価格戦略の議論",
+    en:"Our current pricing hasn't been revised in two years, and I think it's time to revisit it. We've added significant value to the product, our costs have increased, and the market has evolved. I'd like to consider moving from our current flat-fee model to a tiered pricing model with three levels: a starter tier for smaller customers, a professional tier for mid-market, and an enterprise tier with custom pricing. Research suggests this kind of structure better aligns price with the value different customer segments receive. The main risk is customer pushback, particularly for those who would move to a higher tier. I'd like to discuss how to manage that transition."
+  },
+  {
+    title:"Building Trust with a New Team",
+    jp:"新チームとの信頼構築",
+    en:"I'm aware that coming in as a new leader to an established team can be challenging for everyone. You've built something here together, and I want to honor that. My approach in the first ninety days will be to listen much more than I talk. I'll be meeting with each of you individually to understand your perspective on what's working, what isn't, and what opportunities you see. I won't be making big changes in the first month — I want to understand the context before I act. What I can commit to is being direct and honest with you, following through on what I say, and making decisions that are in the best interest of the team and our customers."
+  },
+  {
+    title:"Global Team Coordination",
+    jp:"グローバルチームの調整",
+    en:"Coordinating across multiple time zones is one of our biggest operational challenges. Our teams in Tokyo, London, and New York have very limited overlap in working hours, which makes real-time collaboration difficult. I'd like to implement a few practices to improve this. First, we'll designate a two-hour overlap window each day — eight to ten AM New York time — as our primary collaboration window for all global teams. Second, anything important should be documented asynchronously in our project management tool so that people can engage on their own schedule. Third, we'll rotate the timing of global all-hands meetings so that no single team always gets the inconvenient time slot."
+  },
+  {
+    title:"End of Year Reflection",
+    jp:"年末の振り返り",
+    en:"As we close out the year, I want to take a moment to reflect on what we've accomplished together. A year ago, we were a team of twelve. Today, we're twenty-eight. We launched two major products, expanded into a new market, and grew revenue by sixty percent. None of that happened by chance — it happened because of the talent, commitment, and creativity of every person on this team. There were also challenges — moments when we didn't live up to our own standards, and times when the pressure was genuinely hard. I want to acknowledge those too, because learning from them is what will make us stronger next year."
+  },
+  {
+    title:"Customer Discovery Interview",
+    jp:"顧客ディスカバリーインタビュー",
+    en:"Thank you so much for agreeing to speak with me today. I want to be upfront: I'm not here to sell you anything. I'm doing research to understand the challenges facing teams like yours, and your perspective would be incredibly valuable. I have about eight questions prepared, but I'm happy to go wherever the conversation leads. There are no right or wrong answers — I'm genuinely interested in your experience. Let's start with a broad question: can you walk me through a typical week and describe the moments that feel most frustrating or time-consuming in your role?"
+  },
+  {
+    title:"Aligning on a New Strategy",
+    jp:"新戦略の方向性合わせ",
+    en:"After months of research, analysis, and consultation, I'd like to share the new strategic direction I'm proposing for the company. The core insight driving this change is that the market is shifting faster than we anticipated, and our current positioning — which served us well for five years — is becoming less differentiated. The new strategy centers on three pivots: moving up-market to focus on enterprise clients, building a platform business model rather than a point solution, and expanding our service offering to create higher switching costs. I know this represents a significant change, and I want to take time to discuss each component and hear your reactions."
+  },
+  {
+    title:"Post-Merger Integration",
+    jp:"合併後の統合",
+    en:"The acquisition closed last Friday, and now the real work begins. Successful integration is what will determine whether this deal creates or destroys value. From experience, the biggest integration risks are talent loss, cultural conflict, and technology incompatibility. On talent, we've identified the top twenty people from the acquired company and we're putting retention packages in place immediately. On culture, we'll be running joint workshops to understand our differences and deliberately build a shared culture. On technology, we'll operate both systems in parallel for six months while we develop a migration plan. I'd like weekly integration status reports going forward."
+  },
+  {
+    title:"Discussing Sustainability",
+    jp:"サステナビリティの議論",
+    en:"Our sustainability commitments are not just about optics — they're increasingly central to our business strategy. Customers are asking about our environmental practices in RFPs. Investors are looking at our ESG scores. And our employees, especially newer ones, care deeply about this. Let me share where we are and where we're going. We've reduced our carbon emissions by twenty percent over the past two years. Our target is net zero by twenty-thirty. We're in the process of transitioning our energy sources and working with suppliers to reduce the emissions in our supply chain. I'll share our full sustainability report at next month's board meeting."
+  },
+  {
+    title:"Introducing Agile Methodology",
+    jp:"アジャイル手法の導入",
+    en:"We're going to be transitioning our product development process to agile methodology over the next quarter. I know some of you are familiar with agile and some of you aren't, so let me give a brief overview. Agile is an iterative approach to development that emphasizes flexibility, collaboration, and delivering working software in short cycles called sprints. Instead of planning everything upfront and delivering a big release months later, we'll plan and deliver in two-week increments. This allows us to incorporate feedback continuously and adapt to changing requirements. The transition will involve some new ceremonies — daily standups, sprint planning, and retrospectives — which we'll walk through together."
+  },
+  {
+    title:"Final Year Review",
+    jp:"年度末レビュー",
+    en:"Let's do our final review of the year and make sure we're closing out strong. I want each team to come prepared to share three things: your key accomplishments, the lessons you learned, and your top priorities for the first quarter of next year. This isn't just a reporting exercise — I want this to be a genuine conversation that sets us up for success. One thing I've noticed is that we tend to underinvestment in celebration and acknowledgment. This year, I'm going to start the meeting by recognizing specific contributions before we get into the numbers. The people on this team deserve to hear clearly what they've achieved."
+  },
+  {
+    title:"Presenting to the Board",
+    jp:"取締役会へのプレゼン",
+    en:"Good morning, board members. Thank you for your time today. I'll be presenting our company's performance for the past fiscal year and our strategic plan for the next three years. I have forty minutes for the presentation, followed by thirty minutes for questions and discussion. The key headlines are: revenue grew by thirty-eight percent, we achieved positive EBITDA for the first time in our company's history, and we successfully expanded into two new markets. These results validate our strategy and position us well for the next phase of growth. Let me now walk you through each of these areas in detail before presenting our forward-looking plan."
+  },
+  {
+    title:"Handling a Difficult Conversation",
+    jp:"難しい会話への対処",
+    en:"I want to have a candid conversation with you, and I hope you'll hear me out with an open mind. The situation has been on my mind for some time and I think it's better to address it directly than to let it fester. I've noticed some tension in recent team meetings, and I've received feedback from others that it's affecting team dynamics. I'm not here to assign blame — I believe these situations are almost always more complex than they appear. I want to understand your perspective and I want to share mine. My goal is for us to leave this conversation with a clearer understanding and a path forward that works for both of us."
+  },
+  {
+    title:"Opening Remarks at Conference",
+    jp:"カンファレンス開会の挨拶",
+    en:"Good morning, everyone. Welcome to our third annual industry conference. I'm delighted to see so many familiar faces and to welcome so many new ones. Over the next two days, we have an extraordinary lineup of speakers, workshops, and networking events. This conference exists because we believe that progress in our industry comes from the open exchange of ideas and experience. We are stronger when we collaborate than when we compete. I hope you leave here with new knowledge, new relationships, and renewed energy for the work we all do. Without further delay, let me introduce our opening keynote speaker."
+  },
+];
+
+const S_PERFECT=["🏆 あなたの発音は完璧です！ネイティブ並みの素晴らしさ！","🌟 Absolutely PERFECT! あなたの発音に脱帽です！","🚀 パーフェクト！もはやあなたはビジネス英語の達人！","✨ 完璧すぎる発音！世界中のオフィスで通じます！","🎯 Outstanding! これは天才的な発音です！"];
+const S_GOOD=["👍 かなり惜しい！もう少しで完璧！","💪 Good job! あと少しで完璧な発音です！","🔥 Almost there! 練習あるのみ、ファイト！"];
+const S_TRY=["😊 ナイストライ！もう一度お手本を聞いてから発音してみよう！","💡 練習が光を生む！繰り返しチャレンジしよう！","🎵 リズムに乗ってもう一度！きっとうまくいく！"];
+
+/* セット管理 */
+let sPool=[];          // 現在の100問プール
+let sCompleted=[];     // 完了済みインデックス（poolに対して）
+let sPhrs=[];          // 現在セットの10問
+let sSetNum=1;         // 何セット目か（10問単位）
+let sAllSetsDone=false;// 100問完了フラグ
+let sIdx=0,sPerfects=0,sSlowMode=false,sLvl=1,sIsRec=false,sRec=null;
+let sGenerating=false; // AI生成中フラグ
+const srOK=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
+const S_PER_SET=10;
+
+function shadowNorm(s){return s.toLowerCase().replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();}
+function shadowSim(a,b){
+  const wa=shadowNorm(a).split(' '),wb=shadowNorm(b).split(' ');
+  let m=0;wb.forEach(w=>{if(wa.includes(w))m++;});
+  const pr=wb.length?m/wb.length:0,rc=wa.length?m/wa.length:0;
+  if(pr+rc===0)return 0;return 2*pr*rc/(pr+rc);
+}
+
+/* 初回起動 */
+function shadowInit(){
+  sPool=shuffle([...SHADOW_ALL]);
+  sCompleted=[];sSetNum=1;sAllSetsDone=false;
+  shadowStartSet();
+}
+
+/* 10問セット開始 */
+function shadowStartSet(){
+  const start=(sSetNum-1)*S_PER_SET;
+  sPhrs=sPool.slice(start, start+S_PER_SET);
+  sIdx=0;sPerfects=0;
+  shadowRender();
+}
+
+function shadowRender(){
+  const p=sPhrs[sIdx],tot=sPhrs.length;
+  const globalNum=(sSetNum-1)*S_PER_SET+sIdx+1;
+  const totalPool=sPool.length;
+  document.getElementById('shadow-badge').textContent='LEVEL '+sLvl;
+  document.getElementById('s-lv-text').textContent='Level '+sLvl+' — シャドーイング';
+  document.getElementById('s-score').textContent=sPerfects+' / '+tot;
+  document.getElementById('s-fill').style.width=Math.round(sPerfects/tot*100)+'%';
+  document.getElementById('s-counter').textContent='STORY '+globalNum+' / '+totalPool;
+  document.getElementById('s-en').textContent=p.en;
+  document.getElementById('s-jp').textContent='📌 '+p.title+'　|　'+p.jp;
+  const pb=document.getElementById('s-play-btn');
+  pb.classList.remove('playing');pb.innerHTML='<i class="ti ti-player-play" style="font-size:14px"></i>お手本を聞く';
+  const sb=document.getElementById('s-slow-btn');
+  sb.classList.toggle('active',sSlowMode);
+  sb.innerHTML=`<i class="ti ti-clock" style="font-size:13px"></i>${sSlowMode?'スロー中':'ゆっくり'}`;
+  const mic=document.getElementById('s-mic'),ring=document.getElementById('s-ring'),lbl=document.getElementById('s-mic-lbl');
+  mic.classList.remove('recording');ring.classList.remove('active');
+  lbl.textContent='押して話す';lbl.classList.remove('recording');
+  shadowSetWave(false);
+  const tb=document.getElementById('s-transcript'),rb=document.getElementById('s-result'),ar=document.getElementById('s-actions');
+  tb.style.display='none';rb.style.display='none';ar.style.display='none';
+  setTimeout(()=>shadowPlay(),500);
+}
+
+function shadowPlay(){
+  const btn=document.getElementById('s-play-btn');
+  if(btn){btn.classList.add('playing');btn.innerHTML='<i class="ti ti-volume" style="font-size:14px"></i>再生中...';}
+  speak(sPhrs[sIdx].en,sSlowMode?0.55:0.82,()=>{
+    const b=document.getElementById('s-play-btn');
+    if(b){b.classList.remove('playing');b.innerHTML='<i class="ti ti-player-play" style="font-size:14px"></i>お手本を聞く';}
+  });
+}
+
+function shadowToggleSlow(){
+  sSlowMode=!sSlowMode;
+  const sb=document.getElementById('s-slow-btn');
+  sb.classList.toggle('active',sSlowMode);
+  sb.innerHTML=`<i class="ti ti-clock" style="font-size:13px"></i>${sSlowMode?'スロー中':'ゆっくり'}`;
+}
+
+function shadowSetWave(on){for(let i=0;i<5;i++){const b=document.getElementById('sw'+i);if(b)b.classList.toggle('active',on);}}
+
+function shadowToggleRec(){
+  if(!srOK){
+    const rb=document.getElementById('s-result'),rm=document.getElementById('s-result-msg'),ar=document.getElementById('s-actions');
+    rm.textContent='⚠️ このブラウザは音声認識に対応していません（Chromeをお使いください）。';
+    rb.className='shadow-result try-fb';rb.style.display='block';ar.style.display='flex';return;
+  }
+  sIsRec?shadowStopRec():shadowStartRec();
+}
+
+function shadowStartRec(){
+  sIsRec=true;
+  const SRC=window.SpeechRecognition||window.webkitSpeechRecognition;
+  sRec=new SRC();sRec.lang='en-US';sRec.interimResults=true;sRec.continuous=false;sRec.maxAlternatives=3;
+  const mic=document.getElementById('s-mic'),ring=document.getElementById('s-ring'),lbl=document.getElementById('s-mic-lbl');
+  const tb=document.getElementById('s-transcript'),rb=document.getElementById('s-result'),ar=document.getElementById('s-actions');
+  mic.classList.add('recording');ring.classList.add('active');
+  lbl.textContent='録音中… 話してください';lbl.classList.add('recording');
+  tb.style.display='none';rb.style.display='none';ar.style.display='none';
+  shadowSetWave(true);
+  let finalText='';
+  sRec.onresult=e=>{
+    let interim='',fin='';
+    for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)fin+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript;}
+    if(fin)finalText=fin;
+    const t=document.getElementById('s-transcript');
+    if(t){t.textContent='🎤 '+(finalText||interim);t.style.display='block';}
+  };
+  sRec.onend=()=>{
+    sIsRec=false;shadowSetWave(false);
+    const m=document.getElementById('s-mic'),r=document.getElementById('s-ring'),l=document.getElementById('s-mic-lbl');
+    m.classList.remove('recording');r.classList.remove('active');l.textContent='押して話す';l.classList.remove('recording');
+    if(finalText)shadowEval(finalText);
+    else{
+      const rb2=document.getElementById('s-result'),rm=document.getElementById('s-result-msg'),ar2=document.getElementById('s-actions');
+      rm.textContent='😅 音声が聞き取れませんでした。もう一度試してください。';
+      rb2.className='shadow-result try-fb';rb2.style.display='block';ar2.style.display='flex';
+    }
+  };
+  sRec.onerror=e=>{
+    sIsRec=false;shadowSetWave(false);
+    const m=document.getElementById('s-mic'),r=document.getElementById('s-ring'),l=document.getElementById('s-mic-lbl');
+    m.classList.remove('recording');r.classList.remove('active');l.textContent='押して話す';l.classList.remove('recording');
+    const rb3=document.getElementById('s-result'),rm3=document.getElementById('s-result-msg'),ar3=document.getElementById('s-actions');
+    rm3.textContent=e.error==='not-allowed'?'🔒 マイクのアクセスを許可してください。':'⚠️ 認識エラー。もう一度試してください。';
+    rb3.className='shadow-result try-fb';rb3.style.display='block';ar3.style.display='flex';
+  };
+  try{sRec.start();}catch(e){sIsRec=false;shadowSetWave(false);}
+}
+
+function shadowStopRec(){if(sRec){try{sRec.stop();}catch(e){}}}
+
+function shadowEval(spoken){
+  const target=sPhrs[sIdx].en,sc=shadowSim(target,spoken),pct=Math.round(sc*100);
+  const rb=document.getElementById('s-result'),rm=document.getElementById('s-result-msg'),md=document.getElementById('s-match'),ar=document.getElementById('s-actions');
+  if(sc>=0.75){
+    sPerfects++;
+    document.getElementById('s-score').textContent=sPerfects+' / '+sPhrs.length;
+    document.getElementById('s-fill').style.width=Math.round(sPerfects/sPhrs.length*100)+'%';
+    rm.textContent=rand(S_PERFECT);md.textContent='一致度 '+pct+'% — ほぼ完璧な発音です！';rb.className='shadow-result perfect';
+    launchConfetti();
+  } else if(sc>=0.4){
+    rm.textContent=rand(S_GOOD);md.textContent='一致度 '+pct+'% — もう少しで完璧！';rb.className='shadow-result good';
+  } else {
+    rm.textContent=rand(S_TRY);md.textContent='一致度 '+pct+'% — お手本をよく聞いてチャレンジ！';rb.className='shadow-result try-fb';
+  }
+  rb.style.display='block';ar.style.display='flex';
+}
+
+function shadowRetry(){
+  const tb=document.getElementById('s-transcript'),rb=document.getElementById('s-result'),ar=document.getElementById('s-actions');
+  tb.style.display='none';rb.style.display='none';ar.style.display='none';
+}
+
+function shadowNext(){
+  if(sIdx===sPhrs.length-1){
+    shadowSetResult();
+  } else {
+    sIdx++;shadowRender();
+  }
+}
+
+/* 10問セット完了 */
+function shadowSetResult(){
+  const tot=sPhrs.length,pct=Math.round(sPerfects/tot*100);
+  const globalDone=sSetNum*S_PER_SET;
+  const totalPool=sPool.length;
+  const isAllDone=globalDone>=totalPool;
+
+  let emoji,title,msg,btnLabel,btnFn;
+  if(sPerfects===tot){emoji='🏆';title='セット'+sSetNum+' パーフェクト！！';sLvl++;launchConfetti();}
+  else if(sPerfects>=Math.ceil(tot*0.6)){emoji='🌟';title='セット'+sSetNum+' クリア！';}
+  else{emoji='💪';title='セット'+sSetNum+' 完了！';}
+  msg=`${sPerfects} / ${tot} 成功（${pct}%）　全体進捗: ${globalDone} / ${totalPool} ストーリー`;
+
+  if(isAllDone){
+    btnLabel='🤖 AIで新しい100問を生成！';
+    btnFn='shadowGenerateNew()';
+  } else {
+    btnLabel='次の10問へ 🚀 ('+( globalDone+1 )+'〜'+(Math.min(globalDone+S_PER_SET,totalPool))+'問目)';
+    btnFn='shadowNextSet()';
+  }
+
+  document.getElementById('shadow-badge').textContent='LEVEL '+sLvl;
+  document.getElementById('screen-shadow').innerHTML=`
+    <div class="result-screen">
+      <div class="result-emoji">${emoji}</div>
+      <div class="stars-row">
+        <span class="star">${sPerfects>=4?'⭐':'☆'}</span>
+        <span class="star">${sPerfects>=7?'⭐':'☆'}</span>
+        <span class="star">${sPerfects===10?'⭐':'☆'}</span>
+      </div>
+      <p class="result-title">${title}</p>
+      <p class="result-msg" style="font-size:12px;margin-bottom:8px">${msg}</p>
+      ${isAllDone?`<p class="result-msg" style="color:var(--pur);font-weight:800;font-size:13px">🎉 全100問完了！AIが新しい100問を生成します！</p>`:''}
+      <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:280px;margin-top:8px">
+        <button class="restart-btn" style="background:var(--pur)" onclick="${btnFn}">${btnLabel}</button>
+        <button class="restart-btn" style="background:var(--bg);color:var(--pur);border:2px solid var(--pur)" onclick="shadowRestartPool()">最初からやり直す 🔄</button>
+      </div>
+    </div>
+  `;
+}
+
+/* 次の10問セット */
+function shadowNextSet(){
+  sSetNum++;
+  shadowRebuildScreen();
+  shadowStartSet();
+}
+
+/* AI生成で新100問 */
+async function shadowGenerateNew(){
+  sGenerating=true;
+  document.getElementById('screen-shadow').innerHTML=`
+    <div class="result-screen">
+      <div class="result-emoji" style="font-size:48px">🤖</div>
+      <p class="result-title" style="margin-bottom:8px">AI生成中...</p>
+      <p class="result-msg">Claude AIが新しいビジネス英語ストーリーを<br>100問生成しています。少々お待ちください。</p>
+      <div style="margin-top:16px;width:200px;height:8px;background:var(--pur-l);border-radius:99px;overflow:hidden">
+        <div id="gen-bar" style="height:100%;background:var(--pur);border-radius:99px;width:0%;transition:width .5s"></div>
+      </div>
+      <p id="gen-status" style="font-size:12px;color:var(--muted);margin-top:8px">接続中...</p>
+    </div>
+  `;
+
+  // プログレスバーアニメーション
+  let prog=0;
+  const progTimer=setInterval(()=>{
+    prog=Math.min(prog+Math.random()*3,90);
+    const bar=document.getElementById('gen-bar');
+    const st=document.getElementById('gen-status');
+    if(bar)bar.style.width=prog+'%';
+    if(st){
+      if(prog<20)st.textContent='ストーリーのテーマを考えています...';
+      else if(prog<40)st.textContent='英文を作成しています...';
+      else if(prog<60)st.textContent='日本語タイトルを付けています...';
+      else if(prog<80)st.textContent='ビジネス表現を最適化中...';
+      else st.textContent='もうすぐ完成！';
+    }
+  },400);
+
+  try{
+    const prompt=`You are a business English teacher. Generate exactly 20 unique business conversation short stories for shadowing practice. Each story should be 8-12 sentences long (about 1-2 minutes to read aloud) and cover different business scenarios.
+
+Return ONLY a valid JSON array. No markdown, no backticks, no explanation. Format:
+[{"title":"Short English Title","jp":"日本語タイトル","en":"The full story text here."},...]
+
+Topics to cover (use all 20, one each):
+1. Job interview 2. Sales presentation 3. Board meeting 4. Team conflict 5. Product demo 6. Contract signing 7. Business trip planning 8. Customer escalation 9. Merger announcement 10. Startup funding pitch 11. Performance improvement plan 12. New market entry 13. Technology adoption 14. Supplier negotiation 15. Marketing campaign review 16. Legal compliance briefing 17. Cross-functional project 18. Executive coaching 19. Company acquisition 20. Employee recognition
+
+Make each story natural, conversational business English.`;
+
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:8000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+
+    const data=await resp.json();
+    let text=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
+    text=text.replace(/```json|```/g,'').trim();
+    const newStories=JSON.parse(text);
+
+    clearInterval(progTimer);
+    const bar=document.getElementById('gen-bar');if(bar)bar.style.width='100%';
+    const st=document.getElementById('gen-status');if(st)st.textContent='完成！';
+
+    // 新プールにセット（既存100問 + 新生成）
+    setTimeout(()=>{
+      sPool=shuffle([...SHADOW_ALL,...newStories]);
+      sCompleted=[];sSetNum=1;sAllSetsDone=false;sLvl++;sGenerating=false;
+      document.getElementById('shadow-badge').textContent='LEVEL '+sLvl;
+      shadowRebuildScreen();
+      shadowStartSet();
+    },800);
+
+  } catch(err){
+    clearInterval(progTimer);
+    // API失敗時はオリジナル100問をシャッフルして再スタート
+    document.getElementById('screen-shadow').innerHTML=`
+      <div class="result-screen">
+        <div class="result-emoji">⚠️</div>
+        <p class="result-title">生成に失敗しました</p>
+        <p class="result-msg">ネットワーク接続を確認してください。<br>元の100問でリスタートします。</p>
+        <button class="restart-btn" style="background:var(--pur);max-width:260px;margin-top:12px" onclick="shadowRestartPool()">元の100問で再スタート 🔄</button>
+      </div>
+    `;
+    sGenerating=false;
+  }
+}
+
+/* プール最初からやり直し */
+function shadowRestartPool(){
+  sPool=shuffle([...SHADOW_ALL]);
+  sCompleted=[];sSetNum=1;sAllSetsDone=false;
+  shadowRebuildScreen();
+  shadowStartSet();
+}
+
+/* シャドーイング画面のHTMLを再構築してからshadowRenderで使えるようにする */
+function shadowRebuildScreen(){
+  document.getElementById('screen-shadow').innerHTML=`
+    <div class="prog-wrap">
+      <div class="prog-row">
+        <span class="prog-lbl" id="s-lv-text" style="color:var(--pur)">Level 1 — シャドーイング</span>
+        <span class="prog-score" id="s-score">0 / 10</span>
+      </div>
+      <div class="prog-bar" style="background:var(--pur-l)">
+        <div class="prog-fill" id="s-fill" style="width:0%;background:var(--pur)"></div>
+      </div>
+    </div>
+    <div class="s-phrase-card">
+      <div class="q-counter" id="s-counter">STORY 1 / 100</div>
+      <div class="s-en" id="s-en">—</div>
+      <div class="s-jp" id="s-jp">—</div>
+      <div class="play-row">
+        <button class="play-btn" id="s-play-btn" onclick="shadowPlay()">
+          <i class="ti ti-player-play" style="font-size:14px"></i>お手本を聞く
+        </button>
+        <button class="slow-btn" id="s-slow-btn" onclick="shadowToggleSlow()">
+          <i class="ti ti-clock" style="font-size:13px"></i>ゆっくり
+        </button>
+      </div>
+    </div>
+    <div class="mic-area">
+      <div class="mic-outer">
+        <div class="mic-ring" id="s-ring"></div>
+        <button class="mic-core" id="s-mic" onclick="shadowToggleRec()">
+          <i class="ti ti-microphone mic-ico"></i>
+        </button>
+      </div>
+      <div class="wave-bars">
+        <div class="wave-bar" id="sw0"></div><div class="wave-bar" id="sw1"></div>
+        <div class="wave-bar" id="sw2"></div><div class="wave-bar" id="sw3"></div>
+        <div class="wave-bar" id="sw4"></div>
+      </div>
+      <span class="mic-lbl" id="s-mic-lbl">押して話す</span>
+    </div>
+    <div class="transcript-box" id="s-transcript"></div>
+    <div class="shadow-result" id="s-result">
+      <div id="s-result-msg"></div>
+      <div class="match-detail" id="s-match"></div>
+    </div>
+    <div class="s-action-row" id="s-actions" style="display:none">
+      <button class="retry-btn" onclick="shadowRetry()">もう一度 🔄</button>
+      <button class="shadow-next-btn" onclick="shadowNext()">次へ →</button>
+    </div>
+  `;
+}
+
+
+shadowInit();
+loadVoices();
+</script>
+</body>
+</html>
